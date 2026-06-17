@@ -15,6 +15,13 @@ window.FLASHCARD_LIBRARY.manifest = {
       "description": "止损位置、移动止损、部分平仓、时间止损与仓位管理",
       "file": "decks/al-brooks-stop-loss.json",
       "theme": "risk"
+    },
+    {
+      "id": "al-brooks-entry-techniques",
+      "title": "Al Brooks 入场技巧闪卡",
+      "description": "H2/L2、二次入场、强突破、区间边界、失败突破、反转与交易前检查",
+      "file": "decks/al-brooks-entry-techniques.json",
+      "theme": "entry"
     }
   ]
 };

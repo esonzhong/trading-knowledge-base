@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Al Brooks 止损闪卡 - 优化记忆版</title>
+<style>
+:root {
+  color-scheme: dark light;
+  --bg: #0d1117;
+  --panel: #151b23;
+  --panel-2: #1d2633;
+  --text: #eef3fb;
+  --muted: #98a6bb;
+  --line: #2a3648;
+  --accent: #f2b84b;
+  --good: #4fc37b;
+  --bad: #ff6b6b;
+  --blue: #67a2ff;
+  --shadow: 0 18px 44px rgba(0,0,0,.28);
+  --radius: 8px;
+}
+body.light {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --panel-2: #eef2f7;
+  --text: #17202d;
+  --muted: #617085;
+  --line: #d9e1ec;
+  --accent: #a46300;
+  --good: #117a43;
+  --bad: #bd3535;
+  --blue: #1558c8;
+  --shadow: 0 12px 30px rgba(20,35,58,.12);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  letter-spacing: 0;
+}
+button, input, select { font: inherit; }
+button {
+  min-height: 38px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #111827; border-color: transparent; font-weight: 800; }
+button.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+button.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--panel) 93%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+.top-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 14px 18px 12px;
+  display: grid;
+  gap: 12px;
+}
+.title-row { display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+h1 { margin: 0; font-size: 20px; line-height: 1.25; }
+.sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.tabs { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
+.tabs button { border: 0; min-height: 30px; background: transparent; color: var(--muted); padding: 5px 9px; }
+.tabs button.active { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.controls { display: grid; grid-template-columns: minmax(180px, 1fr) 170px 142px auto; gap: 8px; }
+.controls input, .controls select {
+  min-height: 38px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 8px 10px;
+}
+.layout {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px 18px 28px;
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr);
+  gap: 16px;
+}
+.side {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: var(--radius);
+  align-self: start;
+  position: sticky;
+  top: 116px;
+  max-height: calc(100vh - 136px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.score { padding: 14px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.meter { height: 8px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.meter span { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--good)); transition: width .25s; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--panel-2); border-radius: var(--radius); padding: 8px; text-align: center; }
+.stat b { display: block; font-size: 18px; }
+.stat span { color: var(--muted); font-size: 11px; }
+.list { overflow: auto; padding: 8px; }
+.list button {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 6px;
+  background: transparent;
+  border-color: transparent;
+  display: grid;
+  grid-template-columns: 38px 1fr 18px;
+  gap: 8px;
+  align-items: center;
+}
+.list button.active { background: var(--panel-2); border-color: var(--line); }
+.num { color: var(--accent); font-size: 12px; font-weight: 800; }
+.q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); justify-self: end; }
+.dot.good { background: var(--good); }
+.dot.bad { background: var(--bad); }
+.study { display: grid; gap: 12px; min-width: 0; }
+.card {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.head { padding: 18px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; }
+.section { color: var(--accent); font-size: 12px; font-weight: 800; }
+.head .small { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.question { padding: 24px 20px; }
+.question h2 { margin: 0; font-size: 26px; line-height: 1.42; }
+.answer {
+  display: none;
+  border-top: 1px solid var(--line);
+  padding: 18px 20px 20px;
+  font-size: 15px;
+  line-height: 1.72;
+}
+.answer.open { display: block; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.block {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.block.full { grid-column: 1 / -1; }
+.block h3 { margin: 0 0 8px; color: var(--accent); font-size: 13px; }
+.tagline { font-size: 18px; font-weight: 800; line-height: 1.45; }
+ul { margin: 0; padding-left: 18px; }
+li { margin: 5px 0; }
+.formula {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  overflow-x: auto;
+}
+.actions { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+.empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); }
+.mobile-nav { display: none; }
+body.mobile-forced .layout { grid-template-columns: 1fr; max-width: 720px; }
+body.mobile-forced .side { display: none; }
+body.mobile-forced .grid { grid-template-columns: 1fr; }
+body.mobile-forced .controls { grid-template-columns: 1fr 1fr; }
+body.mobile-forced .controls input { grid-column: 1 / -1; }
+body.mobile-forced .mobile-nav { display: grid; }
+@media (max-width: 760px) {
+  .top-inner { padding: 12px; }
+  .title-row { align-items: flex-start; }
+  h1 { font-size: 18px; }
+  .controls { grid-template-columns: 1fr 1fr; }
+  .controls input { grid-column: 1 / -1; }
+  .layout { grid-template-columns: 1fr; padding: 12px 12px 96px; }
+  .side { display: none; }
+  .head { padding: 14px; }
+  .question { padding: 18px 14px; min-height: 148px; display: flex; align-items: center; }
+  .question h2 { font-size: 22px; }
+  .answer { padding: 14px; }
+  .grid { grid-template-columns: 1fr; }
+  .actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 10px max(10px, env(safe-area-inset-left)) calc(10px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right));
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+  }
+  .desktop-only { display: none; }
+  .mobile-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="title-row">
+      <div>
+        <h1>Al Brooks 止损闪卡</h1>
+        <div class="sub">优化记忆版：先定义风险，再允许交易发生</div>
+      </div>
+      <div class="tabs" aria-label="主题">
+        <button id="darkBtn" class="active">夜晚</button>
+        <button id="lightBtn">白天</button>
+      </div>
+    </div>
+    <div class="controls">
+      <input id="search" type="search" placeholder="搜索关键词、编号或主题">
+      <select id="section"></select>
+      <select id="status">
+        <option value="">全部状态</option>
+        <option value="new">未标记</option>
+        <option value="good">已掌握</option>
+        <option value="bad">需复习</option>
+      </select>
+      <div class="tabs" aria-label="视图">
+        <button id="autoView" class="active">自动</button>
+        <button id="desktopView">电脑</button>
+        <button id="mobileView">手机</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="side">
+    <div class="score">
+      <div class="meter"><span id="meter"></span></div>
+      <div class="stats">
+        <div class="stat"><b id="totalCount">0</b><span>当前</span></div>
+        <div class="stat"><b id="goodCount">0</b><span>掌握</span></div>
+        <div class="stat"><b id="badCount">0</b><span>复习</span></div>
+      </div>
+      <button id="reset">重置进度</button>
+    </div>
+    <div class="list" id="cardList"></div>
+  </aside>
+
+  <section class="study">
+    <div id="stage"></div>
+    <div class="actions">
+      <button id="prev">上一张</button>
+      <button id="show" class="primary">显示答案</button>
+      <button id="markBad" class="bad">需复习</button>
+      <button id="markGood" class="good desktop-only">已掌握</button>
+    </div>
+    <div class="mobile-nav">
+      <button id="nextMobile">下一张</button>
+      <button id="markGoodMobile" class="good">已掌握</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const cards = [
+{s:"心态原则",q:"止损是交易成本，不是失败",t:"止损不是羞辱，而是让系统继续运行的成本。",p:["被止损只说明这笔交易的前提暂时没有兑现。","高胜率系统也会连续止损，这是统计分布的一部分。","好的交易员接受小亏，避免让小亏变成无法修复的大亏。"],m:["不要说“被止损说明交易已经错了”，有时只是正常概率噪音。","不要把止损当成情绪失败。"],k:"止损像房租：不付成本，就没有营业资格。"},
+{s:"第一法则",q:"入场前先设止损，知道哪里错再进场",t:"不知道在哪里退出，就还没有资格入场。",p:["先找结构失效点，再考虑入场价。","止损可以在信号棒外、形态极值外、交易区间外或波动噪音外。","止损距离决定仓位大小，而不是反过来。"],m:["不要为了开更大仓位，把止损硬塞到很近。","没有失效点的交易，本质是情绪下注。"],k:"先写“我错在哪里”，再点买入或卖出。"},
+{s:"标准位置",q:"止损一定放在信号棒极点外 1-2 点吗？",t:"信号棒外是常见基准，但必须结合品种波动和结构。",p:["做多常见止损：信号棒低点、回调低点或形态低点下方。","做空常见止损：信号棒高点、反弹高点或形态高点上方。","距离要避开普通噪音，并满足账户风险。"],m:["1-2 个报价单位对 BTC 或高波动品种可能太近。","不能为了隐藏止损而放到没有结构意义的位置。"],k:"止损放在交易理由失效处，不放在心里舒服处。"},
+{s:"生死法则",q:"扛单是不是爆仓的唯一原因？",t:"扛单是爆仓的高发原因，但爆仓还来自杠杆、滑点、流动性和系统风险。",p:["主动止损优于被动强平。","亏损后加仓摊平，会把判断错误变成资金灾难。","被止损后先复盘，不急着追回来。"],m:["“唯一原因”太绝对；真正要记住的是不要让亏损失控。","不要把补仓和计划内分批建仓混为一谈。"],k:"小亏是刹车，扛单是拆刹车。"},
+{s:"移动止损",q:"止损只朝有利方向移动",t:"止损可以收紧风险，但不应为了逃避亏损而放宽。",p:["盈利后可按结构、均线、前高前低或波段点移动止损。","移动止损应保护交易逻辑，而不是保护情绪。","若要给交易更多空间，必须在入场前就计划好。"],m:["不要把止损往亏损方向移动来“等它回来”。","也不要过早移到成本，导致好交易被正常回调洗掉。"],k:"止损能收紧风险，不能扩大借口。"},
+{s:"部分平仓",q:"1:1 盈亏比时必须平仓 50% 吗？",t:"1R 平半是心理友好的管理法，但不是 Brooks 的固定规则。",p:["适合新手降低情绪压力、先锁一部分利润。","趋势强时，过早平半可能降低大行情收益。","是否平半取决于交易类型：scalp、swing、区间交易或趋势跟随。"],m:["不要把 1R 平半写成所有交易必须执行。","移到成本前，要确认不是把止损放到容易被正常回调扫掉的位置。"],k:"平半是工具，不是法律。"},
+{s:"隐藏止损",q:"不要把止损放在明显位置",t:"明显价位容易被测试，但别把所有扫损都归因于机构猎杀。",p:["整数关口、前高前低、趋势线附近常有大量订单。","止损应放在结构失效外，并预留合理噪音空间。","真正关键是：被触发后，交易理由是否已经失效。"],m:["“机构猎杀”容易让人阴谋化市场。多数扫损只是流动性和订单聚集。","离明显位远不等于安全，结构才是核心。"],k:"市场会找流动性，止损要放在理由失效处。"},
+{s:"仓位管理",q:"仓位大小由止损距离决定，不是心情决定",t:"先定账户风险，再用止损距离反推仓位。",p:["账户风险额 = 账户资金 × 单笔风险比例。","仓位 = 账户风险额 ÷ 每单位止损风险。","高波动品种止损远，仓位自然要小。"],m:["1-2% 只是常见上限，不是所有人都适合。","合约还要检查强平价是否远离计划止损。"],k:"止损越远，仓位越小；想活久，就按这个来。"},
+{s:"时间止损",q:"入场后 N 根 K 线无进展就出",t:"时间止损用于处理“没有按预期发展”的交易。",p:["日内交易若数根 K 线没有跟进，可以减仓或退出。","波段交易可用更长时间窗口，看交易计划是否仍有效。","时间止损能释放资金，避免无效持仓变成情绪持仓。"],m:["3-5 根只是参考，不同周期和策略不能照搬。","横盘不一定失败，有时也是突破前蓄势。"],k:"好交易通常不该长期没有反应。"},
+{s:"终极法则",q:"止损是生存工具，不是亏损证明",t:"止损的真正价值，是让你在判断失效时还能活着等下一次机会。",p:["先设止损，后入场。","止损放在结构失效处，并考虑波动噪音。","不扛单、不情绪摊平。","盈利后按结构收紧风险，不机械乱移。","仓位永远由账户风险和止损距离决定。"],m:["止损纪律不是越近越好，而是越合理越好。","保本、平半、移动止损都要服务策略类型。"],k:"交易员的命不是预测准，而是亏得小。"}
+];
+
+const state = {
+  idx: Number(localStorage.getItem("ab_stop_idx") || 0),
+  marks: JSON.parse(localStorage.getItem("ab_stop_marks") || "{}"),
+  answerOpen: false,
+  filtered: cards.map((_, i) => i)
+};
+const $ = id => document.getElementById(id);
+const sectionEl = $("section");
+const searchEl = $("search");
+const statusEl = $("status");
+const stage = $("stage");
+const list = $("cardList");
+
+function initSections() {
+  const sections = [...new Set(cards.map(c => c.s))];
+  sectionEl.innerHTML = '<option value="">全部主题</option>' + sections.map(s => `<option value="${s}">${s}</option>`).join("");
+}
+function renderAnswer(c) {
+  return `<div class="grid">
+    <div class="block full"><h3>一句话结论</h3><div class="tagline">${c.t}</div></div>
+    <div class="block"><h3>必须记住</h3><ul>${c.p.map(x => `<li>${x}</li>`).join("")}</ul></div>
+    <div class="block"><h3>容易误用</h3><ul>${c.m.map(x => `<li>${x}</li>`).join("")}</ul></div>
+    <div class="block full"><h3>记忆钩子</h3><div class="formula">${c.k}</div></div>
+  </div>`;
+}
+function applyFilters() {
+  const q = searchEl.value.trim().toLowerCase();
+  const section = sectionEl.value;
+  const status = statusEl.value;
+  state.filtered = cards.map((c, i) => ({c, i})).filter(({c, i}) => {
+    const mark = state.marks[i] || "new";
+    const text = `${String(i + 1).padStart(2, "0")} ${c.s} ${c.q} ${c.t} ${c.p.join(" ")} ${c.m.join(" ")}`.toLowerCase();
+    return (!q || text.includes(q)) && (!section || c.s === section) && (!status || mark === status);
+  }).map(x => x.i);
+  if (!state.filtered.includes(state.idx)) state.idx = state.filtered[0] ?? 0;
+  state.answerOpen = false;
+  render();
+}
+function render() {
+  localStorage.setItem("ab_stop_idx", state.idx);
+  const good = Object.values(state.marks).filter(x => x === "good").length;
+  const bad = Object.values(state.marks).filter(x => x === "bad").length;
+  $("totalCount").textContent = state.filtered.length;
+  $("goodCount").textContent = good;
+  $("badCount").textContent = bad;
+  $("meter").style.width = `${Math.round(good / cards.length * 100)}%`;
+  list.innerHTML = state.filtered.map(i => {
+    const c = cards[i], mark = state.marks[i] || "new";
+    return `<button class="${i === state.idx ? "active" : ""}" data-i="${i}">
+      <span class="num">${String(i + 1).padStart(2, "0")}</span>
+      <span class="q">${c.q}</span>
+      <span class="dot ${mark === "good" ? "good" : mark === "bad" ? "bad" : ""}"></span>
+    </button>`;
+  }).join("");
+  list.querySelectorAll("button").forEach(b => b.onclick = () => {
+    state.idx = Number(b.dataset.i);
+    state.answerOpen = false;
+    render();
+  });
+  if (!state.filtered.length) {
+    stage.innerHTML = `<div class="empty">没有匹配的闪卡</div>`;
+    return;
+  }
+  const c = cards[state.idx];
+  stage.innerHTML = `<article class="card">
+    <div class="head">
+      <div><div class="section">${c.s}</div><div class="small">止损闪卡 ${String(state.idx + 1).padStart(2, "0")} / ${cards.length}</div></div>
+      <div class="small">${state.filtered.indexOf(state.idx) + 1} / ${state.filtered.length}</div>
+    </div>
+    <div class="question"><h2>${c.q}</h2></div>
+    <div class="answer ${state.answerOpen ? "open" : ""}">${renderAnswer(c)}</div>
+  </article>`;
+  $("show").textContent = state.answerOpen ? "隐藏答案" : "显示答案";
+}
+function move(delta) {
+  if (!state.filtered.length) return;
+  const pos = state.filtered.indexOf(state.idx);
+  state.idx = state.filtered[(pos + delta + state.filtered.length) % state.filtered.length];
+  state.answerOpen = false;
+  render();
+}
+function mark(v) {
+  state.marks[state.idx] = v;
+  localStorage.setItem("ab_stop_marks", JSON.stringify(state.marks));
+  move(1);
+}
+$("show").onclick = () => { state.answerOpen = !state.answerOpen; render(); };
+$("prev").onclick = () => move(-1);
+$("nextMobile").onclick = () => move(1);
+$("markGood").onclick = () => mark("good");
+$("markGoodMobile").onclick = () => mark("good");
+$("markBad").onclick = () => mark("bad");
+$("reset").onclick = () => {
+  if (!confirm("确定清空止损闪卡学习进度？")) return;
+  state.marks = {};
+  localStorage.removeItem("ab_stop_marks");
+  render();
+};
+searchEl.oninput = applyFilters;
+sectionEl.onchange = applyFilters;
+statusEl.onchange = applyFilters;
+
+function setTheme(mode) {
+  document.body.classList.toggle("light", mode === "light");
+  $("darkBtn").classList.toggle("active", mode === "dark");
+  $("lightBtn").classList.toggle("active", mode === "light");
+  localStorage.setItem("ab_stop_theme", mode);
+}
+$("darkBtn").onclick = () => setTheme("dark");
+$("lightBtn").onclick = () => setTheme("light");
+setTheme(localStorage.getItem("ab_stop_theme") || "dark");
+
+function setView(mode) {
+  document.body.classList.toggle("desktop-forced", mode === "desktop");
+  document.body.classList.toggle("mobile-forced", mode === "mobile");
+  $("autoView").classList.toggle("active", mode === "auto");
+  $("desktopView").classList.toggle("active", mode === "desktop");
+  $("mobileView").classList.toggle("active", mode === "mobile");
+  localStorage.setItem("ab_stop_view", mode);
+}
+$("autoView").onclick = () => setView("auto");
+$("desktopView").onclick = () => setView("desktop");
+$("mobileView").onclick = () => setView("mobile");
+setView(localStorage.getItem("ab_stop_view") || "auto");
+
+document.addEventListener("keydown", e => {
+  if (["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
+  if (e.key === " ") { e.preventDefault(); state.answerOpen = !state.answerOpen; render(); }
+  if (e.key === "ArrowRight") move(1);
+  if (e.key === "ArrowLeft") move(-1);
+  if (e.key.toLowerCase() === "j") mark("good");
+  if (e.key.toLowerCase() === "k") mark("bad");
+});
+
+initSections();
+applyFilters();
+</script>
+</body>
+</html>

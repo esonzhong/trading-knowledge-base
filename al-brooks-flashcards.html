@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Al Brooks 交易知识闪卡</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f1a; color: #e0e0e0; min-height: 100vh; }
+.header { background: #1a1a2e; border-bottom: 1px solid #2a2a4a; padding: 16px 24px; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 18px; color: #ffd700; font-weight: 600; }
+.header .subtitle { font-size: 12px; color: #888; margin-top: 4px; }
+.toolbar { background: #1a1a2e; padding: 12px 24px; border-bottom: 1px solid #2a2a4a; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.toolbar input[type="text"] { background: #2a2a3e; border: 1px solid #3a3a5a; color: #e0e0e0; padding: 8px 14px; border-radius: 8px; font-size: 14px; width: 240px; }
+.toolbar input[type="text"]:focus { outline: none; border-color: #ffd700; }
+.toolbar select { background: #2a2a3e; border: 1px solid #3a3a5a; color: #e0e0e0; padding: 8px 14px; border-radius: 8px; font-size: 14px; }
+.toolbar .btn { background: #ffd700; color: #0f0f1a; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.toolbar .btn:hover { background: #ffea00; }
+.toolbar .btn.secondary { background: #2a2a4a; color: #e0e0e0; }
+.toolbar .btn.secondary:hover { background: #3a3a5a; }
+.toolbar .stats { font-size: 12px; color: #888; margin-left: auto; }
+.progress-bar { height: 3px; background: #2a2a4a; width: 100%; }
+.progress-bar .fill { height: 100%; background: #ffd700; width: 0%; transition: width 0.3s; }
+.card-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+.card { background: #1a1a2e; border-radius: 16px; margin-bottom: 16px; overflow: hidden; border: 1px solid #2a2a4a; }
+.card-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2a2a4a; }
+.card-num { font-size: 11px; color: #ffd700; font-weight: 600; background: #2a2a3e; padding: 4px 10px; border-radius: 20px; }
+.card-section { font-size: 10px; color: #888; padding: 2px 8px; background: #2a2a3e; border-radius: 4px; }
+.card-question { padding: 20px; cursor: pointer; position: relative; }
+.card-question:hover { background: #1e1e35; }
+.card-question h3 { font-size: 15px; color: #e0e0e0; line-height: 1.6; font-weight: 500; }
+.answer { display: none; }
+.answer.open { display: block; padding: 16px 20px; border-top: 1px solid #2a2a4a; }
+.answer h4 { font-size: 11px; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; }
+.answer p, .answer li { font-size: 14px; color: #c0c0d0; line-height: 1.75; }
+.answer ul { padding-left: 20px; }
+.answer table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+.answer th { background: #2a2a3e; color: #ffd700; padding: 8px 12px; text-align: left; font-weight: 600; }
+.answer td { background: #1e1e35; color: #c0c0d0; padding: 8px 12px; }
+.answer code { background: #2a2a3e; color: #ffd700; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+.toggle-icon { font-size: 20px; color: #ffd700; transition: transform 0.3s; }
+.card.answered .toggle-icon { transform: rotate(180deg); }
+.no-results { text-align: center; padding: 60px 20px; color: #666; font-size: 15px; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📚 Al Brooks 交易知识闪卡</h1>
+  <div class="subtitle">风险本质 · 概率三维度 · 趋势判断 · 支撑测试 · 杠杆仓位</div>
+</div>
+<div class="progress-bar"><div class="fill" id="progressFill"></div></div>
+
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍 搜索关键词...">
+  <select id="sectionFilter">
+    <option value="">全部章节</option>
+    <option value="风险工具">第一部分：风险与交易工具</option>
+    <option value="概率三维度">第二部分：概率三维度</option>
+    <option value="场景详解">第三部分：快速参考表场景详解</option>
+    <option value="趋势判断">第四部分：趋势判断</option>
+    <option value="支撑测试">第五部分：支撑位测试次数</option>
+    <option value="杠杆仓位">第六部分：杠杆与仓位管理</option>
+    <option value="体系认知">第七部分：体系与交易认知</option>
+    <option value="BTC实战">第八部分：BTC实战应用</option>
+    <option value="风控心理">第九部分：交易心理与风控</option>
+    <option value="补充知识">第十部分：补充知识点</option>
+  </select>
+  <button class="btn secondary" id="showAllBtn">全部展开</button>
+  <button class="btn secondary" id="hideAllBtn">全部收起</button>
+  <button class="btn secondary" id="markAllBtn">全部标记已学</button>
+  <button class="btn secondary" id="resetBtn">重置进度</button>
+  <div class="stats" id="stats">已学习: 0 / 100</div>
+</div>
+
+<div class="card-container" id="cardContainer"><div class="card" id="card-闪卡001">
+    <div class="card-header">
+        <span class="card-num">闪卡001</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡001')" style="cursor:pointer">
+        <h3>交易的底层逻辑是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>交易的底层逻辑是期望值（EV）框架：
+
+EV = 概率(P) × 盈亏比(R) - 成本(C)
+
+每次下注 = 用有限风险（止损/权利金）去博"概率 × 盈亏比"这个乘积
+
+只要 EV &gt; 0，这笔交易就是数学上正确的。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡002">
+    <div class="card-header">
+        <span class="card-num">闪卡002</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡002')" style="cursor:pointer">
+        <h3>现货的风险本质是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>现货的风险本质是方向性损失 + 止损纪律
+
+最大损失 = 本金全部（若不止损）
+核心变量：方向 + 止损纪律</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡003">
+    <div class="card-header">
+        <span class="card-num">闪卡003</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡003')" style="cursor:pointer">
+        <h3>合约/永续的风险本质是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>合约/永续的风险本质是杠杆放大损失
+
+最大损失 = 本金全部 + 可能穿仓
+核心变量：方向 + 杠杆倍数 + 止损纪律
+穿仓原因：杠杆 + 强平机制 + 流动性断层三者叠加</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡004">
+    <div class="card-header">
+        <span class="card-num">闪卡004</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡004')" style="cursor:pointer">
+        <h3>合约为什么会穿仓？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>核心原因是杠杆 + 强平机制 + 流动性断层三者叠加：
+
+1. 仓位亏损 → 扣减保证金
+2. 触及强平线 → 交易所强制平仓
+3. 价格断层 → 实际成交价跳过强平价
+
+插针是最常见的穿仓场景（暴跌时强平价下方无流动性，实际成交价远低于强平价）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡005">
+    <div class="card-header">
+        <span class="card-num">闪卡005</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡005')" style="cursor:pointer">
+        <h3>买期权（Call/Put买方）的风险本质是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>买期权（Call/Put买方）的风险本质是权利金损失（有限风险）
+
+Call买方最大损失 = 已付权利金（价格归零也只亏这么多）
+Put买方最大损失 = 已付权利金
+核心变量：时间价值衰减（Theta）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡006">
+    <div class="card-header">
+        <span class="card-num">闪卡006</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡006')" style="cursor:pointer">
+        <h3>卖期权（Short Call/Put卖方）的风险本质是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>卖期权（Short Call/Put卖方）的风险本质是理论上无限的敞口风险
+
+Short Put = 被行权需按约定价格接盘 + 保证金被追缴
+Short Call = 被行权需按约定价格卖出 + 保证金被追缴
+最大盈利 = 权利金，最大损失 = 理论无限（标的价格跌到0）
+核心变量：方向 + 波动率 + 时间</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡007">
+    <div class="card-header">
+        <span class="card-num">闪卡007</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡007')" style="cursor:pointer">
+        <h3>什么是&quot;用风险去下注&quot;？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>"用风险去下注"这句话的含义是：每次交易都是用有限风险（止损损失/权利金）去博"概率 × 盈亏比"这个乘积。只要EV为正，这笔交易就是数学上正确的。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡008">
+    <div class="card-header">
+        <span class="card-num">闪卡008</span>
+        <span class="card-section">第一部分：风险与交易工具</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡008')" style="cursor:pointer">
+        <h3>不同交易工具的适用场景是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>不同交易工具分别适合：
+
+• 现货：高概率 + 中等盈亏比（趋势跟踪）
+• 合约：中等概率 + 高盈亏比（PA精准入场）
+• 买期权：低概率 + 极高盈亏比（彩票策略）
+• 卖期权：高概率 + 低盈亏比（收割时间价值）
+
+共同点：都是用"有限风险"换取"不确定但可计算的正期望"</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡009">
+    <div class="card-header">
+        <span class="card-num">闪卡009</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡009')" style="cursor:pointer">
+        <h3>Al Brooks 概率三维度是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>概率的三个来源 = 结构概率 × 信号概率 × 催化剂概率</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡010">
+    <div class="card-header">
+        <span class="card-num">闪卡010</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡010')" style="cursor:pointer">
+        <h3>什么是结构概率（Context）？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>结构概率回答"现在的市场在哪里？"的问题，是全局视角，决定了高概率方向和低风险入场点。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡011">
+    <div class="card-header">
+        <span class="card-num">闪卡011</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡011')" style="cursor:pointer">
+        <h3>强趋势（Trend）的结构概率是多少？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势下：
+• 顺势方向胜率：70-80%
+• 逆势方向胜率：20-30%
+
+特征：均线多头排列/空头排列 + 高点低点不断抬高/降低</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡012">
+    <div class="card-header">
+        <span class="card-num">闪卡012</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡012')" style="cursor:pointer">
+        <h3>震荡（Range）的结构概率是多少？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>震荡市场下：
+• 高抛低吸胜率：50-55%
+• 追涨杀跌胜率：45-50%
+
+特征：价格在两条水平线之间来回</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡013">
+    <div class="card-header">
+        <span class="card-num">闪卡013</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡013')" style="cursor:pointer">
+        <h3>趋势反转（Trend Reversal）的结构概率是多少？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>趋势反转初期：
+• 顺势胜率：40-50%
+• 逆势摸顶抄底胜率：55-65%
+
+特征：动能减弱，出现背离，突破均线</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡014">
+    <div class="card-header">
+        <span class="card-num">闪卡014</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡014')" style="cursor:pointer">
+        <h3>楔形（Wedge/Creak）的结构概率是多少？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>楔形突破方向胜率：60-70%（第3-4次更强）
+
+特征：上升/下降楔形，震荡区间收窄</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡015">
+    <div class="card-header">
+        <span class="card-num">闪卡015</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡015')" style="cursor:pointer">
+        <h3>结构概率的实际应用原则是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>结构概率的实战应用原则：
+
+• 强趋势中：只顺势，只找回踩入场，不做逆势，不猜顶底
+• 震荡中：高抛低吸，不追破位，不持有"梦想仓位"
+• 反转初期：开始轻仓试仓，止损要宽，不重仓追涨杀跌</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡016">
+    <div class="card-header">
+        <span class="card-num">闪卡016</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡016')" style="cursor:pointer">
+        <h3>什么是信号概率（Signal）？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>信号概率回答"入场点是否在关键位置？"的问题，入场点越接近关键结构，胜率越高。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡017">
+    <div class="card-header">
+        <span class="card-num">闪卡017</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡017')" style="cursor:pointer">
+        <h3>第1梯队信号位（65-75%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第1梯队（65-75%胜率）：
+• 第三次测试强支撑/压力（楔形第3-4次）
+• 放量突破后的回踩（机构入场区）
+• 二次测试趋势线/均线（双重确认）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡018">
+    <div class="card-header">
+        <span class="card-num">闪卡018</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡018')" style="cursor:pointer">
+        <h3>第2梯队信号位（55-65%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第2梯队（55-65%胜率）：
+• 第一次强支撑/压力（单根K线反转）
+• 震荡区间边界（高抛低吸）
+• 均线支撑/压力（EMA20/50/200）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡019">
+    <div class="card-header">
+        <span class="card-num">闪卡019</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡019')" style="cursor:pointer">
+        <h3>第3梯队信号位（45-55%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第3梯队（45-55%胜率）：
+• 中段震荡中的随机入场
+• 均线金叉/死叉
+• 指标背离</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡020">
+    <div class="card-header">
+        <span class="card-num">闪卡020</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡020')" style="cursor:pointer">
+        <h3>第4梯队信号位（30-45%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第4梯队（30-45%胜率）：
+• 突破后追涨/杀跌（无回踩）
+• 消息面驱动追单
+• 指标钝化区强行入场</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡021">
+    <div class="card-header">
+        <span class="card-num">闪卡021</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡021')" style="cursor:pointer">
+        <h3>信号概率的核心原则是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>信号胜率 = 位置精确度 × K线确认强度
+
+• 位置精确度：关键支撑压力区（1-2%以内）→ ✅；中段模糊区 → ❌
+• K线确认强度：三重确认（pin bar + 缩量 + 背离）→ ✅✅✅；单根反转K → ✅；无确认直接入场 → ❌</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡022">
+    <div class="card-header">
+        <span class="card-num">闪卡022</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡022')" style="cursor:pointer">
+        <h3>什么是催化剂概率（Catalyst）？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>催化剂概率回答"有没有推动价格继续走的力量？"的问题，没有催化剂的信号容易失败。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡023">
+    <div class="card-header">
+        <span class="card-num">闪卡023</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡023')" style="cursor:pointer">
+        <h3>第1梯队催化剂（+15-20%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第1梯队（+15-20%胜率）：
+• 财经数据发布（非农/CPI/利率决议）→ 数据后波动剧烈，顺势方向胜率高
+• 突破重要整数关口（$60,000 / $100,000）→ 触发大量止损单 + 机构订单
+• 放量突破关键结构（机构明显入场）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡024">
+    <div class="card-header">
+        <span class="card-num">闪卡024</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡024')" style="cursor:pointer">
+        <h3>第2梯队催化剂（+8-12%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第2梯队（+8-12%胜率）：
+• 市场整体情绪一致（恐惧/贪婪极端）
+• 合约持仓量大幅变化（多空博弈区）
+• ETF净流入/流出（若有相关品种）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡025">
+    <div class="card-header">
+        <span class="card-num">闪卡025</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡025')" style="cursor:pointer">
+        <h3>第3梯队催化剂（+3-5%胜率）的具体内容是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第3梯队（+3-5%胜率）：
+• 技术面共振（多个指标同向信号）
+• 分析师目标价密集区
+• 期权到期（Gamma影响）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡026">
+    <div class="card-header">
+        <span class="card-num">闪卡026</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡026')" style="cursor:pointer">
+        <h3>无催化剂的情况是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>无催化剂 = 无消息、无数据、无明显逻辑，纯粹技术面"感觉" → 胜率打折，容易被短期波动洗出</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡027">
+    <div class="card-header">
+        <span class="card-num">闪卡027</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡027')" style="cursor:pointer">
+        <h3>催化剂能否弥补结构和信号的缺陷？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>不能。催化剂只是加分项，上限一般1.15-1.20，不能弥补结构和信号的缺陷。三个维度都必须达标才有高胜率。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡028">
+    <div class="card-header">
+        <span class="card-num">闪卡028</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡028')" style="cursor:pointer">
+        <h3>三维度叠加的总胜率计算公式是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>总胜率 ≈ 结构概率 × 信号概率 × 催化剂系数</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡029">
+    <div class="card-header">
+        <span class="card-num">闪卡029</span>
+        <span class="card-section">第二部分：概率三维度</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡029')" style="cursor:pointer">
+        <h3>做单三问是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>实战中做单三问：
+
+1. 结构是什么？顺势还是逆势？（结构胜率）
+2. 入场点在关键位吗？有K线确认吗？（信号胜率）
+3. 有催化剂吗？数据？突破？放量？（催化剂加成）
+
+满足前两条才考虑入场；满足三条 → 重仓/加仓；只满足一条 → 轻仓/不做；三条都不满足 → 绝对不做</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡030">
+    <div class="card-header">
+        <span class="card-num">闪卡030</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡030')" style="cursor:pointer">
+        <h3>强趋势顺势回踩入场的期望值分析</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势顺势回踩入场：
+• 胜率：65-75%
+• 盈亏比：1.5:1~2:1
+• 期望值：✅ 正
+
+通俗理解：顺水划船，省力（胜率高）。回调低点买入，涨回去的幅度往往比止损幅度大（盈亏比正）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡031">
+    <div class="card-header">
+        <span class="card-num">闪卡031</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡031')" style="cursor:pointer">
+        <h3>强趋势顺势回踩入场的Al Brooks具体场景</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>Al Brooks中强趋势回踩入场具体场景：
+• 强上升趋势，回踩到EMA20/50均线
+• 高点低点不断抬高，回踩到前期低点支撑
+• 等待"缩量+反转K"信号后入场
+
+这就是最舒服的做单节奏</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡032">
+    <div class="card-header">
+        <span class="card-num">闪卡032</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡032')" style="cursor:pointer">
+        <h3>震荡区间高抛低吸的期望值分析</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>震荡区间高抛低吸：
+• 胜率：45-55%
+• 盈亏比：1:1~1.5:1
+• 期望值：⚠️ 勉强
+
+原因：上下轨之间距离有限，每次赚的可能就一点点，亏一次可能就回到原点</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡033">
+    <div class="card-header">
+        <span class="card-num">闪卡033</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡033')" style="cursor:pointer">
+        <h3>为什么震荡高抛低吸只是&quot;勉强&quot;正EV？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>胜率50%，盈亏比1:1 → 100次交易 = 50赢×1R - 50亏×1R = 0R（刚好白干）。必须做到胜率52%+ 且 盈亏比1.1:1才有微利，手续费一扣，可能还是负的。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡034">
+    <div class="card-header">
+        <span class="card-num">闪卡034</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡034')" style="cursor:pointer">
+        <h3>楔形第3-4次突破的期望值分析</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>楔形第3-4次突破：
+• 胜率：60-70%
+• 盈亏比：2:1~3:1
+• 期望值：✅ 正
+
+通俗理解：蓄力足够多，一旦突破，幅度通常是前面震荡区间的2-3倍。又准又狠 → 高胜率 + 高盈亏比 = 黄金机会</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡035">
+    <div class="card-header">
+        <span class="card-num">闪卡035</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡035')" style="cursor:pointer">
+        <h3>为什么楔形第3-4次突破胜率高？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <li>第1次突破：能量不够，可能被压回来
+• 第2次突破：还在犹豫，多空博弈
+• 第3次突破：收敛末端，波动率压缩到极限，蓄力够足 → 突破成功率高</li>
+    </div>
+</div>
+<div class="card" id="card-闪卡036">
+    <div class="card-header">
+        <span class="card-num">闪卡036</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡036')" style="cursor:pointer">
+        <h3>突破追涨（无回踩）的期望值分析</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>突破追涨（无回踩）：
+• 胜率：30-40%
+• 盈亏比：需&gt;3:1才合算
+• 期望值：⚠️ 负EV（除非特殊情况）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡037">
+    <div class="card-header">
+        <span class="card-num">闪卡037</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡037')" style="cursor:pointer">
+        <h3>为什么突破追涨胜率低？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>刚突破时，价格往往在最不稳定的位置，还没等来"回踩确认"，直接追的风险极大。就像球还没停稳你就伸手去接，大概率接空。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡038">
+    <div class="card-header">
+        <span class="card-num">闪卡038</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡038')" style="cursor:pointer">
+        <h3>什么时候突破追涨胜率会提高？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>突破追涨胜率提高的情况：
+• 突破+放量+无重大阻力位 → 胜率可到50%
+• 非农/数据发布后顺势追 → 胜率可到55%
+• 突破整数关口（$100,000）→ 胜率提高
+
+但仍不是最佳入场点，最佳点永远是：突破后的回踩确认点</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡039">
+    <div class="card-header">
+        <span class="card-num">闪卡039</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡039')" style="cursor:pointer">
+        <h3>逆势摸顶抄底的期望值分析</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>逆势摸顶抄底：
+• 胜率：25-35%
+• 盈亏比：需&gt;4:1才合算
+• 期望值：❌ 负EV（长期必亏）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡040">
+    <div class="card-header">
+        <span class="card-num">闪卡040</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡040')" style="cursor:pointer">
+        <h3>为什么逆势摸顶抄底胜率低？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>市场的顶和底是走出来之后才知道的，在走出来之前，所有摸顶抄底都是"赌"。趋势有惯性，逆势 = 和惯性对抗 → 大多数时候输。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡041">
+    <div class="card-header">
+        <span class="card-num">闪卡041</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡041')" style="cursor:pointer">
+        <h3>Al Brooks对摸顶抄底的态度是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>Al Brooks 明确说："Never try to pick the top or bottom"（永远不要去猜顶底）。顺势 → 等信号回调入场；逆势 → 等更确认的信号，做小止损。但本质上，逆势仍然是低胜率，Al Brooks 自己也不推荐。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡042">
+    <div class="card-header">
+        <span class="card-num">闪卡042</span>
+        <span class="card-section">第三部分：场景详解</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡042')" style="cursor:pointer">
+        <h3>期望值场景的总结是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>高期望值场景（值得重仓）：
+• ✅ 强趋势 + 回踩入场 = 70% × 2R = 正EV
+• ✅ 楔形第3-4次突破 = 65% × 2.5R = 正EV
+
+中等期望值场景（轻仓/小仓位）：
+• ⚠️ 震荡高抛低吸 = 50% × 1.2R ≈ 白干
+• ⚠️ 突破追涨 = 35% × 2R ≈ 白干
+
+负期望值场景（尽量避免）：
+• ❌ 逆势摸顶抄底 = 30% × 1.5R = 负EV
+• ❌ 无信号、无催化剂、无结构 = 25% × 1R = 负EV</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡043">
+    <div class="card-header">
+        <span class="card-num">闪卡043</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡043')" style="cursor:pointer">
+        <h3>强趋势的&quot;五字口诀&quot;是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势"五字口诀"：大、连、少、浅、快
+• 大 = 实体K线大（多空一方主导）
+• 连 = 连续出现（一根接一根）
+• 少 = 重叠少（K线之间很少互相遮盖）
+• 浅 = 回调浅（1-3根K线就结束）
+• 快 = 远离快（突破后迅速拉开距离）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡044">
+    <div class="card-header">
+        <span class="card-num">闪卡044</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡044')" style="cursor:pointer">
+        <h3>强趋势的K线实体大小特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强上升趋势 = 大实体阳线，多头主导；弱上升趋势 = 小实体，多空拉扯。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡045">
+    <div class="card-header">
+        <span class="card-num">闪卡045</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡045')" style="cursor:pointer">
+        <h3>强趋势的连续性特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势：连续5根以上同向K线，中间很少夹杂反向K；弱趋势：2-3根阳线后立刻出现阴线，反复拉锯。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡046">
+    <div class="card-header">
+        <span class="card-num">闪卡046</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡046')" style="cursor:pointer">
+        <h3>强趋势的重叠度特征是什么？（最关键的特征）</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势：每根K线几乎不覆盖前一根，K线紧密排列，收盘逐级抬高；弱趋势：大量重叠，上下影线交错。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡047">
+    <div class="card-header">
+        <span class="card-num">闪卡047</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡047')" style="cursor:pointer">
+        <h3>强趋势的回调深度特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强上升趋势的回调：只回调1根K线，就继续上涨；弱上升趋势的回调：回调5根以上，深度超过50%。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡048">
+    <div class="card-header">
+        <span class="card-num">闪卡048</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡048')" style="cursor:pointer">
+        <h3>强趋势的收盘位置特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强上升趋势：收盘在当天最高点附近，多头完全主导；弱上升趋势：收盘在当天中间，多空还在博弈。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡049">
+    <div class="card-header">
+        <span class="card-num">闪卡049</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡049')" style="cursor:pointer">
+        <h3>强趋势突破后的表现特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势突破：快速远离，突破后几乎没有回踩，直接涨；弱趋势突破：犹豫，突破后又回来，回踩很深的假突破。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡050">
+    <div class="card-header">
+        <span class="card-num">闪卡050</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡050')" style="cursor:pointer">
+        <h3>弱趋势的&quot;五字口诀&quot;是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>弱趋势"五字口诀"：小、十、多、深、慢
+• 小 = 实体K线小（多空博弈）
+• 十 = 十字星多（犹豫）
+• 多 = 重叠多（互相覆盖）
+• 深 = 回调深（5根以上）
+• 慢 = 远离慢（假突破多）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡051">
+    <div class="card-header">
+        <span class="card-num">闪卡051</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡051')" style="cursor:pointer">
+        <h3>强趋势vs弱趋势的对照表</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <li>实体大小：强&gt;60%实体 vs 弱&lt;40%实体
+• 连续性：强5根+同向 vs 弱2-3根就断
+• 重叠度：强极少重叠 vs 弱大量重叠
+• 回调深度：强1-3根K线（浅） vs 弱5根+K线（深）
+• 收盘位置：强极值（高/低） vs 弱中间
+• 突破后表现：强快速远离 vs 弱犹豫回踩</li>
+    </div>
+</div>
+<div class="card" id="card-闪卡052">
+    <div class="card-header">
+        <span class="card-num">闪卡052</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡052')" style="cursor:pointer">
+        <h3>强趋势判断的3步流程是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>第一步：看K线形态（5秒）
+数最近10根K线：大实体阳线多 + 收盘在高位 → 强上升趋势；小实体/十字星多 + 收盘在中位 → 弱趋势
+
+第二步：数回调深度（5秒）
+1-3根止跌 → 强趋势；5根以上才止跌 → 弱趋势/震荡
+
+第三步：看前低/前高（5秒）
+强上升趋势：每次回调的低点不断抬高；弱上升趋势：低点降低 or 走平</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡053">
+    <div class="card-header">
+        <span class="card-num">闪卡053</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡053')" style="cursor:pointer">
+        <h3>均线的量化标准是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>均线多头排列（短期&gt;中期&gt;长期）→ 强上升趋势
+均线缠绕/空头排列 → 弱趋势/震荡
+EMA 20/50/200 三线收敛 → 震荡（无趋势）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡054">
+    <div class="card-header">
+        <span class="card-num">闪卡054</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡054')" style="cursor:pointer">
+        <h3>强趋势信号有哪些？（可以做，顺势重仓）</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>强趋势信号：
+• 连续大实体K线，5根以上
+• 重叠极少，收盘逐级抬高
+• 回调1-3根K线就继续上涨
+• 突破后不回踩，直接远离</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡055">
+    <div class="card-header">
+        <span class="card-num">闪卡055</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡055')" style="cursor:pointer">
+        <h3>弱趋势信号有哪些？（轻仓或不做）</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>弱趋势信号：
+• K线小、十字星多
+• 重叠严重，收盘中位
+• 回调5根以上
+• 突破后反复回踩，假突破多</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡056">
+    <div class="card-header">
+        <span class="card-num">闪卡056</span>
+        <span class="card-section">第四部分：趋势判断</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡056')" style="cursor:pointer">
+        <h3>禁止下单信号是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>禁止下单信号：连弱趋势都算不上的混沌行情（高低点无规律，完全随机）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡057">
+    <div class="card-header">
+        <span class="card-num">闪卡057</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡057')" style="cursor:pointer">
+        <h3>趋势中的支撑测试次数越多会怎样？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>趋势中的支撑（均线/趋势线）测试次数越多，支撑作用越强。每次测试 = 多头在支撑位确认买入 → 共识越来越强 → 支撑越来越稳。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡058">
+    <div class="card-header">
+        <span class="card-num">闪卡058</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡058')" style="cursor:pointer">
+        <h3>震荡中的水平支撑测试次数越多会怎样？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>震荡中的水平支撑测试次数越多，支撑作用越弱。第4-5次测试后常出现突破大跌。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡059">
+    <div class="card-header">
+        <span class="card-num">闪卡059</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡059')" style="cursor:pointer">
+        <h3>趋势型支撑越测试越强的原因是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>因为顺势方向，共识增强。每次测试都证明支撑有效，多头信心增强，空头不敢轻易挑战。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡060">
+    <div class="card-header">
+        <span class="card-num">闪卡060</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡060')" style="cursor:pointer">
+        <h3>水平支撑越测试越弱的物理学解释是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>物理学解释 = 弹簧理论：每次测试"压下去"，都在消耗支撑位的"能量"。弹簧反复压缩 → 金属疲劳 → 最终断裂。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡061">
+    <div class="card-header">
+        <span class="card-num">闪卡061</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡061')" style="cursor:pointer">
+        <h3>水平支撑越测试越弱的博弈论解释是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>博弈论解释：
+• 第1次：空头"试试"支撑力度，多头接住
+• 第2次：空头加大力度，多头继续接
+• 第3次：空头知道支撑稳了，提前布局空单
+• 第4次：多头"习惯性"买入，但空头已经在那里等着砸 → 突破</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡062">
+    <div class="card-header">
+        <span class="card-num">闪卡062</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡062')" style="cursor:pointer">
+        <h3>判断支撑still强的K线特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>判断支撑仍然强的K线特征：
+• ✅ 止跌K线干净（pin bar / 吞没）
+• ✅ 反弹速度越来越快
+• ✅ 反弹幅度大
+• ✅ 成交量收缩（无需大量就能撑住）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡063">
+    <div class="card-header">
+        <span class="card-num">闪卡063</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡063')" style="cursor:pointer">
+        <h3>判断支撑在衰减的K线特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>判断支撑在衰减的K线特征：
+• ⚠️ 止跌K线复杂（多次试探才稳住）
+• ⚠️ 反弹慢、幅度小
+• ⚠️ 成交量放大（越来越需要更多钱才能撑住）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡064">
+    <div class="card-header">
+        <span class="card-num">闪卡064</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡064')" style="cursor:pointer">
+        <h3>判断支撑即将突破的特征是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>判断支撑即将突破的特征：
+• ❌ 越来越难止跌
+• ❌ 每次都创出新低（不是"守住"，是"刚好没破"）
+• ❌ 实体K线越来越小（多空都在撤退）
+• ❌ 突破前极度收敛（波动率压缩到极限）</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡065">
+    <div class="card-header">
+        <span class="card-num">闪卡065</span>
+        <span class="card-section">第五部分：支撑测试</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡065')" style="cursor:pointer">
+        <h3>一句话总结支撑测试次数的影响</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>趋势中的支撑（顺势）→ 越测试越强 → 回调入场；震荡中的支撑（逆势）→ 越测试越弱 → 第3次后警惕。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡066">
+    <div class="card-header">
+        <span class="card-num">闪卡066</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡066')" style="cursor:pointer">
+        <h3>风险相同的核心公式是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>风险相同 = 止损距离（%）× 仓位大小（%）× 杠杆倍数 = 常数</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡067">
+    <div class="card-header">
+        <span class="card-num">闪卡067</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡067')" style="cursor:pointer">
+        <h3>止损距离相同时，50x和1x的风险是否相同？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>相同。止损距离固定为5%时，无论1x还是50x，绝对亏损都是5元（本金5%）。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡068">
+    <div class="card-header">
+        <span class="card-num">闪卡068</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡068')" style="cursor:pointer">
+        <h3>杠杆真正节省的是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>保证金占用 = 仓位名义值 / 杠杆倍数。杠杆节省的是保证金占用，让"闲置资金"可以释放出来。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡069">
+    <div class="card-header">
+        <span class="card-num">闪卡069</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡069')" style="cursor:pointer">
+        <h3>杠杆的合理用法——路径一的含义是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>放大仓位（不放大风险）：用杠杆把保证金压缩到固定比例（如10%），用同样的100元能开10倍大的仓位，但容错空间极小，止损容易被扫掉。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡070">
+    <div class="card-header">
+        <span class="card-num">闪卡070</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡070')" style="cursor:pointer">
+        <h3>杠杆的合理用法——路径二的含义是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>控制保证金 = 控制仓位数量：把保证金压缩后，剩余资金隔离/另用，但危险在于容易开过多仓位，累积起来全部本金暴露。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡071">
+    <div class="card-header">
+        <span class="card-num">闪卡071</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡071')" style="cursor:pointer">
+        <h3>杠杆错误用法的核心原因是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>高杠杆"感觉"风险小 → 随意开仓 → 累积仓位 → 一次性爆。每次看起来"风险很小"，但累积起来全部本金都在暴露。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡072">
+    <div class="card-header">
+        <span class="card-num">闪卡072</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡072')" style="cursor:pointer">
+        <h3>合理杠杆的使用建议是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>✅ 合理杠杆的用法：
+1. 先确定止损位（Al Brooks支撑/压力位）
+2. 计算该止损位对应的仓位大小
+3. 用杠杆压缩保证金，把"闲置资金"隔离
+4. 永远不超过总仓位预算（如账户的20-30%）
+
+❌ 杠杆的错误用法：用高杠杆"感觉"风险小 → 随意开仓 → 累积仓位 → 一次性爆</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡073">
+    <div class="card-header">
+        <span class="card-num">闪卡073</span>
+        <span class="card-section">第六部分：杠杆仓位</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡073')" style="cursor:pointer">
+        <h3>合约中&quot;后备95元&quot;是假象的原因是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>如果95元仍放在合约账户，它和5元保证金共担同一个强平线，实际上仍然是100元在承担风险；如果95元提出合约账户，资金效率极低，95元闲置的机会成本巨大。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡074">
+    <div class="card-header">
+        <span class="card-num">闪卡074</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡074')" style="cursor:pointer">
+        <h3>Al Brooks体系解决的是哪两个变量？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>概率(P) → 通过读K线结构，判断"会涨还是会跌"
+盈亏比(R) → 通过关键支撑压力，定"目标在哪"
+
+期望值 = P(Al Brooks判断) × R(止盈/止损) - C(手续费/磨损)</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡075">
+    <div class="card-header">
+        <span class="card-num">闪卡075</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡075')" style="cursor:pointer">
+        <h3>Al Brooks期望值为正的条件是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>只要 Al Brooks 的判断概率 &gt; 50%，盈亏比 &gt; 1.5:1，长期期望值就是正的。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡076">
+    <div class="card-header">
+        <span class="card-num">闪卡076</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡076')" style="cursor:pointer">
+        <h3>如何量化Al Brooks的胜率？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>唯一靠谱的方式是自己记录交易日志，每笔交易记录：
+• 入场依据（结构类型 + 信号类型）
+• 止损设置（几个点%）
+• 止盈设置（几个点%）
+• 结果：赢/亏
+
+100笔交易后统计顺势交易胜率、逆势交易胜率、各类场景胜率。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡077">
+    <div class="card-header">
+        <span class="card-num">闪卡077</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡077')" style="cursor:pointer">
+        <h3>交易日志的核心字段有哪些？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <tr><td>日期</td><td>方向</td><td>入场理由(结构+信号)</td><td>止损%</td><td>止盈%</td><td>结果</td></tr>
+    </div>
+</div>
+<div class="card" id="card-闪卡078">
+    <div class="card-header">
+        <span class="card-num">闪卡078</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡078')" style="cursor:pointer">
+        <h3>总胜率计算——强趋势+回踩+非农数据前</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>结构：顺势（70%）× 信号：回踩关键位（65%）× 催化剂：数据前趋势强（115%）= 70% × 65% × 1.15 ≈ 52%。催化剂只是加分项，上限1.15-1.20，不能弥补结构和信号的缺陷。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡079">
+    <div class="card-header">
+        <span class="card-num">闪卡079</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡079')" style="cursor:pointer">
+        <h3>总胜率计算——三重共振（强趋势+第3次测试+放量突破）</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>结构：顺势（70%）× 信号：第三次测试关键位（70%）× 催化剂：放量突破（120%）= 70% × 70% × 1.20 = 58.8%。这就是"三重共振"的高胜率场景。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡080">
+    <div class="card-header">
+        <span class="card-num">闪卡080</span>
+        <span class="card-section">第七部分：体系认知</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡080')" style="cursor:pointer">
+        <h3>总胜率计算——震荡+中段随意入场+无消息</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>结构：震荡（50%）× 信号：中段入场（50%）× 催化剂：无（90%）= 50% × 50% × 0.90 = 22.5%。这就是低胜率场景，盈亏比必须&gt;4:1才合算。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡081">
+    <div class="card-header">
+        <span class="card-num">闪卡081</span>
+        <span class="card-section">第八部分：BTC实战</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡081')" style="cursor:pointer">
+        <h3>BTC强上升趋势的具体例子</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>BTC 上升趋势，每次回踩 EMA20 都反弹：
+第1次回踩：反弹到 $65,000
+第2次回踩：反弹到 $66,000（抬高）
+第3次回踩：反弹到 $68,000（继续抬高）
+→ 上升趋势完好，每次测试都是买入机会</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡082">
+    <div class="card-header">
+        <span class="card-num">闪卡082</span>
+        <span class="card-section">第八部分：BTC实战</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡082')" style="cursor:pointer">
+        <h3>震荡区间支撑突破的具体例子</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>价格在 $60,000-$65,000 震荡：
+第1次跌到 $60,000：反弹到 $64,000
+第2次跌到 $60,000：反弹到 $63,000（弱了）
+第3次跌到 $60,000：反弹到 $61,000（更弱）
+第4次：直接跌破 $60,000，暴跌到 $55,000</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡083">
+    <div class="card-header">
+        <span class="card-num">闪卡083</span>
+        <span class="card-section">第九部分：交易心理</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡083')" style="cursor:pointer">
+        <h3>德州扑克框架的期望值公式</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>EV = 概率(P) × 盈亏比(R) - 成本(C)</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡084">
+    <div class="card-header">
+        <span class="card-num">闪卡084</span>
+        <span class="card-section">第九部分：交易心理</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡084')" style="cursor:pointer">
+        <h3>100次交易，40%胜率，2:1盈亏比的期望值计算</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>100次交易 × 40%胜率 × 2:1盈亏比 = 40次赢 × 2R - 60次亏 × 1R = 80R - 60R = +20R。只要R和P的乘积足够大，长期必赚。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡085">
+    <div class="card-header">
+        <span class="card-num">闪卡085</span>
+        <span class="card-section">第九部分：交易心理</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡085')" style="cursor:pointer">
+        <h3>合约防范穿仓的核心措施有哪些？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <li>降低杠杆（≤3x）：减少波动对保证金的冲击
+• 独立止损单：强平价下方挂止损，不依赖交易所强平
+• 避免高波动时段重仓：非农/利率决议前后插针高发
+• 开单前计算最大可承受亏损：仓位大小与止损距离挂钩</li>
+    </div>
+</div>
+<div class="card" id="card-闪卡086">
+    <div class="card-header">
+        <span class="card-num">闪卡086</span>
+        <span class="card-section">第九部分：交易心理</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡086')" style="cursor:pointer">
+        <h3>Al Brooks的&quot;三重确认&quot;原则是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>Al Brooks的三重确认：
+1. 价格在关键支撑/压力区
+2. 出现止跌/止涨的K线信号（pin bar / inside bar）
+3. 小周期出现顺势信号
+
+每多一层 = 概率叠加：
+只满足1个条件 → 35-45%
+满足2个条件 → 50-60%
+满足3个条件 → 65-75%</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡087">
+    <div class="card-header">
+        <span class="card-num">闪卡087</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡087')" style="cursor:pointer">
+        <h3>Al Brooks对强趋势的具体操作建议</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>只顺势，只找回踩入场。这是强趋势中最舒服的做单节奏。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡088">
+    <div class="card-header">
+        <span class="card-num">闪卡088</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡088')" style="cursor:pointer">
+        <h3>&quot;等待信号确认&quot;的含义是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>等"缩量+反转K"信号后入场（强趋势回踩时）；等"停滞信号"（缩量、小实体）后入场（楔形突破时）。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡089">
+    <div class="card-header">
+        <span class="card-num">闪卡089</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡089')" style="cursor:pointer">
+        <h3>楔形突破的具体操作流程是什么？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <div style="margin:4px 0">1. 等待第3次测试趋势线/前高
+2. K线出现"停滞信号"（缩量、小实体）
+3. 突破后回踩确认
+4. 然后做多
+
+这就是教科书级别的高概率做单。</div>
+    </div>
+</div>
+<div class="card" id="card-闪卡090">
+    <div class="card-header">
+        <span class="card-num">闪卡090</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡090')" style="cursor:pointer">
+        <h3>EMA均线的实战应用</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <li>强上升趋势回踩到EMA20/50均线是买入机会
+• 均线多头排列（短期&gt;中期&gt;长期）代表强上升趋势
+• EMA 20/50/200 三线收敛代表震荡（无趋势）</li>
+    </div>
+</div>
+<div class="card" id="card-闪卡091">
+    <div class="card-header">
+        <span class="card-num">闪卡091</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡091')" style="cursor:pointer">
+        <h3>容错空间的定义</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>容错空间 = 在止损被触发之前，价格允许的最大波动幅度。高杠杆 = 容错空间极小（0.1%波动就爆）；低杠杆 = 容错空间较大。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡092">
+    <div class="card-header">
+        <span class="card-num">闪卡092</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡092')" style="cursor:pointer">
+        <h3>盈亏比的实际计算方式</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>盈亏比 = 平均盈利 / 平均亏损。比如平均盈利2元，平均亏损1元，盈亏比 = 2:1。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡093">
+    <div class="card-header">
+        <span class="card-num">闪卡093</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡093')" style="cursor:pointer">
+        <h3>止损纪律的重要性</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>止损纪律是所有交易工具（现货/合约/期权）的核心变量。不设止损 = 本金可能全部亏损，甚至穿仓（合约）或被追缴保证金（卖期权）。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡094">
+    <div class="card-header">
+        <span class="card-num">闪卡094</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡094')" style="cursor:pointer">
+        <h3>买权（Call/Put）的&quot;有限风险&quot;含义</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>Call买方最大损失 = 已付权利金（价格归零也只亏这么多）；Put买方最大损失 = 已付权利金。无论标的价格如何变化，最大亏损就是购买时支付的权利金。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡095">
+    <div class="card-header">
+        <span class="card-num">闪卡095</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡095')" style="cursor:pointer">
+        <h3>卖权（Short）的&quot;无限风险&quot;含义</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>Short Put = 被行权需按约定价格接盘（若大跌，保证金被追缴）；Short Call = 被行权需按约定价格卖出（若大涨，保证金被追缴）；最大盈利 = 权利金，最大损失 = 理论无限（标的价格跌到0或涨到无穷）。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡096">
+    <div class="card-header">
+        <span class="card-num">闪卡096</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡096')" style="cursor:pointer">
+        <h3>为什么买权是&quot;彩票策略&quot;？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>因为买权胜率低（30-40%），但盈亏比极高（可能10:1、20:1），像买彩票一样，用小额权利金去博取超额收益。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡097">
+    <div class="card-header">
+        <span class="card-num">闪卡097</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡097')" style="cursor:pointer">
+        <h3>为什么卖权是&quot;收割时间价值&quot;？</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>因为期权的时间价值会随到期日临近而衰减（Theta衰减），卖方在胜率高的方向收取权利金，等待时间价值慢慢消亡。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡098">
+    <div class="card-header">
+        <span class="card-num">闪卡098</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡098')" style="cursor:pointer">
+        <h3>&quot;顺势&quot;的具体定义</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>顺势 = 顺着当前趋势方向交易。强上升趋势中做多；强下降趋势中做空。不逆势，不猜顶底。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡099">
+    <div class="card-header">
+        <span class="card-num">闪卡099</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡099')" style="cursor:pointer">
+        <h3>&quot;逆势&quot;的具体定义</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>逆势 = 反着当前趋势方向交易。强上升趋势中做空（摸顶）；强下降趋势中做多（抄底）。Al Brooks不推荐，胜率低（25-35%）。</p>
+    </div>
+</div>
+<div class="card" id="card-闪卡100">
+    <div class="card-header">
+        <span class="card-num">闪卡100</span>
+        <span class="card-section">第十部分：补充知识</span>
+    </div>
+    <div class="card-question" onclick="toggleCard('闪卡100')" style="cursor:pointer">
+        <h3>实战中判断趋势的周期选择</h3>
+    </div>
+    <div class="answer">
+        <h4>答案</h4>
+        <p>通常结合多个周期：
+• 1H看短期趋势结构
+• 4H看中期趋势方向
+• 日线看长期趋势框架
+
+具体周期选择取决于交易风格（短线/中线/长线）</p>
+    </div>
+</div></div>
+
+<script>
+function toggleCard(id) {
+    var answer = document.querySelector('#card-' + id + ' .answer');
+    if (answer.classList.contains('open')) {
+        answer.classList.remove('open');
+    } else {
+        answer.classList.add('open');
+    }
+}
+    </script>
+</body>
+</html>

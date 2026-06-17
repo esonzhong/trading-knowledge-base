@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>交易闪卡库</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="top-inner">
+      <div class="title-row">
+        <div>
+          <h1 id="appTitle">交易闪卡库</h1>
+          <div class="sub" id="deckDescription">选择一个卡组开始复习</div>
+        </div>
+        <div class="tabs" aria-label="主题">
+          <button id="darkBtn" class="active">夜晚</button>
+          <button id="lightBtn">白天</button>
+        </div>
+      </div>
+      <div class="controls">
+        <select id="deckSelect"></select>
+        <input id="search" type="search" placeholder="搜索关键词、编号、章节">
+        <select id="section"></select>
+        <select id="status">
+          <option value="">全部状态</option>
+          <option value="new">未标记</option>
+          <option value="good">已掌握</option>
+          <option value="bad">需复习</option>
+        </select>
+        <div class="tabs view-tabs" aria-label="视图">
+          <button id="autoView" class="active">自动</button>
+          <button id="desktopView">电脑</button>
+          <button id="mobileView">手机</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="side">
+      <div class="score">
+        <div class="meter"><span id="meter"></span></div>
+        <div class="stats">
+          <div class="stat"><b id="totalCount">0</b><span>当前</span></div>
+          <div class="stat"><b id="goodCount">0</b><span>掌握</span></div>
+          <div class="stat"><b id="badCount">0</b><span>复习</span></div>
+        </div>
+        <div class="side-actions">
+          <button id="reviewBad">只看复习</button>
+          <button id="reset">重置进度</button>
+        </div>
+      </div>
+      <div class="list" id="cardList"></div>
+    </aside>
+
+    <section class="study">
+      <div id="stage" class="stage"></div>
+      <div class="actions">
+        <button id="prev">上一张</button>
+        <button id="show" class="primary">显示答案</button>
+        <button id="markBad" class="bad">需复习</button>
+        <button id="markGood" class="good desktop-only">已掌握</button>
+      </div>
+      <div class="mobile-nav">
+        <button id="nextMobile">下一张</button>
+        <button id="markGoodMobile" class="good">已掌握</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="decks/manifest.js"></script>
+  <script src="decks/al-brooks-main.js"></script>
+  <script src="decks/al-brooks-stop-loss.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

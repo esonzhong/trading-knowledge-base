@@ -1,0 +1,20 @@
+window.FLASHCARD_LIBRARY = window.FLASHCARD_LIBRARY || {};
+window.FLASHCARD_LIBRARY.manifest = {
+  "title": "交易闪卡库",
+  "decks": [
+    {
+      "id": "al-brooks-main",
+      "title": "Al Brooks 交易闪卡",
+      "description": "价格行为、概率框架、趋势判断、支撑测试、杠杆仓位与交易认知",
+      "file": "decks/al-brooks-main.json",
+      "theme": "price-action"
+    },
+    {
+      "id": "al-brooks-stop-loss",
+      "title": "Al Brooks 止损闪卡",
+      "description": "止损位置、移动止损、部分平仓、时间止损与仓位管理",
+      "file": "decks/al-brooks-stop-loss.json",
+      "theme": "risk"
+    }
+  ]
+};

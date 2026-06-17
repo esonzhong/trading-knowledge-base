@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>止损黄金法则 · Al Brooks · 闪卡</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            color: #e8e8e8;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .label {
+            font-size: 11px;
+            color: #666;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .progress {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 560px;
+        }
+        .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #2a2a38;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .dot.active { background: #f0c040; transform: scale(1.3); }
+        .dot.seen { background: #555; }
+        .hint {
+            font-size: 11px;
+            color: #444;
+            margin-top: 20px;
+            letter-spacing: 1px;
+        }
+        .card {
+            width: min(580px, 92vw);
+            min-height: 340px;
+            background: #14141e;
+            border: 1px solid #242432;
+            border-radius: 20px;
+            padding: 40px 44px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s;
+            position: relative;
+            user-select: none;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+            border-color: #3a3a50;
+        }
+        .card.shake {
+            animation: shake 0.4s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        .card-number {
+            position: absolute;
+            top: 18px; right: 22px;
+            font-size: 11px;
+            color: #444;
+            letter-spacing: 1px;
+        }
+        .rule-index {
+            font-size: 11px;
+            color: #f0c040;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f0c040;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+        .card-body {
+            font-size: 14.5px;
+            color: #a8a8b0;
+            line-height: 1.95;
+        }
+        .card-body ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .card-body li {
+            padding-left: 18px;
+            position: relative;
+            margin-bottom: 7px;
+        }
+        .card-body li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #f0c040;
+        }
+        .card-body .sub {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            padding-left: 18px;
+        }
+        .card-front { display: flex; flex-direction: column; justify-content: center; min-height: 260px; }
+        .card-back { display: none; flex-direction: column; justify-content: center; min-height: 260px; }
+        .card.flipped .card-front { display: none; }
+        .card.flipped .card-back { display: flex; }
+        .card-back .badge {
+            display: inline-block;
+            background: #1e1e2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 16px;
+            width: fit-content;
+        }
+        .card-back .核心 {
+            border-color: #b89a2a;
+            color: #c8a830;
+        }
+        .card-back .记住 {
+            border-color: #2a5a2a;
+            color: #4a8a4a;
+        }
+        .divider {
+            height: 1px;
+            background: #242432;
+            margin: 16px 0;
+        }
+        .flip-hint {
+            font-size: 11px;
+            color: #333;
+            text-align: center;
+            margin-top: 14px;
+        }
+        .badge-front {
+            display: inline-block;
+            background: #1e1e2a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 4px 12px;
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 16px;
+            width: fit-content;
+        }
+        .counter {
+            position: absolute;
+            top: 18px; left: 22px;
+            font-size: 11px;
+            color: #444;
+            letter-spacing: 1px;
+        }
+        .mastered-toggle {
+            position: absolute;
+            bottom: 18px; right: 22px;
+            font-size: 10px;
+            color: #444;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: color 0.2s;
+        }
+        .mastered-toggle:hover { color: #888; }
+        .mastered-toggle.active { color: #4a8a4a; }
+    </style>
+</head>
+<body>
+
+<div class="label">Al Brooks · 止损黄金法则</div>
+
+<div class="progress" id="progress"></div>
+
+<div class="card" id="card" onclick="flip()">
+    <span class="counter" id="counter"></span>
+    <span class="card-number" id="cardNum"></span>
+
+    <div class="card-front" id="cardFront"></div>
+    <div class="card-back"  id="cardBack"></div>
+</div>
+
+<div class="flip-hint">点击卡片翻转 · ← → 键翻页 · 空格键翻转</div>
+
+<script>
+const cards = [
+    {
+        title: "止损是交易成本，不是失败",
+        frontBadge: "心态原则",
+        front: "被止损出场，说明这笔交易<strong style='color:#f0c040'>已经错了</strong>——不是你错，是信号错了。<br><br>把止损看成<strong style='color:#f0c040'>做生意要付的租金</strong>。租金不敢付，就别想赚钱。",
+        back: `<span class="badge 记住">记住</span>
+止损是<strong style='color:#e8e8e8'>统计学必然</strong>，不是情绪创伤。<br>
+高胜率系统也要吃止损——这是游戏规则。`,
+        mastered: false
+    },
+    {
+        title: "入场前先设止损，知道哪里错再进场",
+        frontBadge: "第一法则",
+        front: "任何一笔交易，<strong style='color:#f0c040'>先写止损位置，再谈入场</strong>。<br><br>不知道哪里错 = 不知道这笔交易在赌什么。<br>不知道赌什么 = 赌博，不是交易。",
+        back: `<span class="badge 核心">核心</span>
+永远先确认：<br>
+<strong style='color:#f0c040'>信号棒极点外 1-2 点</strong><br>
+或<strong style='color:#f0c040'>形态极值外</strong><br>
+<br>
+把止损写在纸上，再下单。`,
+        mastered: false
+    },
+    {
+        title: "止损放在信号棒极点外 1-2 点",
+        frontBadge: "标准位置",
+        front: "信号棒（signal bar）就是那根<strong style='color:#f0c040'>给你信号的K线</strong>。<br><br>止损挂在它的极点（最高点或最低点）<strong style='color:#f0c040'>外侧 1-2 个报价单位</strong>。不能放在整数关口，不能放在明显价位。",
+        back: `<span class="badge 记住">记住</span>
+做空 → 止损 = 信号棒<strong style='color:#f0c040'>高点上方 1-2</strong><br>
+做多 → 止损 = 信号棒<strong style='color:#f0c040'>低点下方 1-2</strong><br>
+<br>
+避免放在：整数关口、前高/低、趋势线本身`,
+        mastered: false
+    },
+    {
+        title: "扛单是爆仓的唯一原因",
+        frontBadge: "生死法则",
+        front: "<strong style='color:#e05050'>扛单</strong>是交易员最常见的死法。<br><br>理由永远是\"会回来的\"——然后一路扛到爆仓。<br>Al Brooks原话：<em>\"Cut the loss, take the pain.\"</em>",
+        back: `<span class="badge 记住">记住</span>
+正确做法：<br>
+<strong style='color:#f0c040'>主动止损</strong> > 被动扛单<br>
+<br>
+被止损后：<br>
+✅ 记录教训<br>
+❌ 不追单、不逆势加仓摊平`,
+        mastered: false
+    },
+    {
+        title: "止损只朝有利方向移动",
+        frontBadge: "移动止损",
+        front: "止损只能往赚钱的方向调，<strong style='color:#e05050'>绝对不能往亏损方向移动</strong>。<br><br>很多人亏了就把止损往下调，假装\"成本更低\"——这是<strong style='color:#e05050'>毁灭性的自欺</strong>。",
+        back: `<span class="badge 核心">核心</span>
+移动止损三规则：<br>
+① 只朝<strong style='color:#f0c040'>有利方向</strong>移动<br>
+② 1:1 后移到<strong style='color:#f0c040'>成本价</strong><br>
+③ 宁可移动慢，不可移动快<br>
+<br>
+永远记住：<strong style='color:#e05050'>摊平成本 = 慢性爆仓</strong>`,
+        mastered: false
+    },
+    {
+        title: "1:1 盈亏比时，平仓 50%，剩余移动到成本价",
+        frontBadge: "部分平仓",
+        front: "当价格向有利方向移动到<strong style='color:#f0c040'>止损距离的 1 倍</strong>时：<br><br>① 平掉<strong style='color:#f0c040'>一半仓位</strong><br>② 剩余仓位止损<strong style='color:#f0c040'>移到成本价</strong><br><br>这意味着——最坏情况，剩余仓位已经不亏了。",
+        back: `<span class="badge 核心">核心</span>
+50% 规则：<br>
+<strong style='color:#f0c040'>1:1 时平半仓 → 成本价保本 → 让利润奔跑</strong><br>
+<br>
+示例：<br>
+入场 $1,000　止损 $990（风险 $10）<br>
+价格到 $1,010 → 平 50%，止损改 $1,000<br>
+即使回撤，$1,000 成本价不亏。`,
+        mastered: false
+    },
+    {
+        title: "不要把止损放在明显位置",
+        frontBadge: "隐藏止损",
+        front: "猎杀止损（Stop Hunt）是机构的常见手法。<br><br>把你的止损放在<strong style='color:#e05050'>所有人都放的地方</strong>，就是送人头。<br><br>常见\"死亡位置\"：整数关口、前高/低、趋势线、昨日高低点。",
+        back: `<span class="badge 记住">记住</span>
+聪明止损位置：<br>
+<strong style='color:#f0c040'>信号棒极点外 1-2</strong>（而非整数外）<br>
+<br>
+避开：<br>
+❌ $1,000 / $2,000 整数关口<br>
+❌ 昨日/今日明显高低点<br>
+❌ 趋势线正上方/下方`,
+        mastered: false
+    },
+    {
+        title: "仓位大小由止损距离决定，不是心情决定",
+        frontBadge: "仓位管理",
+        front: "先有止损位置，再算仓位。<br><br>你愿意在这笔交易冒<strong style='color:#f0c040'>总资金的 1-2%</strong>，反推能开多少仓位。<br><br>绝对不是\"想开多少就开多少\"。",
+        back: `<span class="badge 核心">核心公式</span>
+<strong style='color:#f0c040'>仓位 = 账户风险额 ÷ 止损点数</strong><br>
+<br>
+示例（2%风险，$10,000账户）：<br>
+可冒 $200<br>
+止损 = 50点<br>
+每点价值 = $4<br>
+→ 0.1手对应每点$10 → 仓位 × 0.4<br>
+<br>
+<strong style='color:#e05050'>先算仓位，再下单</strong>`,
+        mastered: false
+    },
+    {
+        title: "时间止损：入场后 N 根 K 线无进展就出",
+        frontBadge: "时间止损",
+        front: "有时候价格不动——不是回调，是在<strong style='color:#e05050'>积聚失败</strong>。<br><br>如果你等了<strong style='color:#f0c040'>3-5根K线</strong>还没有朝预期方向走，即使没到止损位，也该主动走。",
+        back: `<span class="badge 记住">记住</span>
+时间止损参考：<br>
+<strong style='color:#f0c040'>日内交易</strong>：3-5根 K 线无进展<br>
+<strong style='color:#f0c040'>波段交易</strong>：等待 2-3 天<br>
+<br>
+目的：<strong style='color:#f0c040'>释放资金 + 避免横盘变亏损</strong>`,
+        mastered: false
+    },
+    {
+        title: "止损是生存工具，不是亏损证明",
+        frontBadge: "终极法则",
+        front: "止损的真正意义：<br><br>让你在<strong style='color:#f0c040'>判断错误时活着离场</strong>，留足本金等下一个机会。<br><br>不怕止损 → 才能执行系统 → 才能稳定盈利。",
+        back: `<span class="badge 记住">记住</span>
+Brooks 五条止损金律：<br>
+① <strong style='color:#f0c040'>先设止损</strong>，后入场<br>
+② <strong style='color:#f0c040'>信号棒外</strong> 1-2点<br>
+③ <strong style='color:#e05050'>不扛单</strong>，不摊平<br>
+④ <strong style='color:#f0c040'>1:1 平半</strong>，移动成本<br>
+⑤ <strong style='color:#f0c040'>只朝有利方向</strong>移动<br>
+<br>
+<strong style='color:#f0c040'>止损纪律 = 交易员的命</strong>`,
+        mastered: false
+    }
+];
+
+let idx = 0;
+let flipped = false;
+
+function render() {
+    const c = cards[idx];
+    document.getElementById('cardFront').innerHTML =
+        `<span class="badge-front">${c.frontBadge}</span>
+         <div class="card-title">${c.title}</div>
+         <div class="card-body">${c.front}</div>`;
+    document.getElementById('cardBack').innerHTML =
+        `<span class="badge 记住">答案</span>
+         <div class="card-title">${c.title}</div>
+         <div class="divider"></div>
+         <div class="card-body">${c.back}</div>`;
+    document.getElementById('cardNum').textContent = `${idx + 1} / ${cards.length}`;
+    document.getElementById('counter').textContent = flipped ? '翻转' : '正面';
+
+    const dots = document.querySelectorAll('.dot');
+    dots.forEach((d, i) => {
+        d.className = 'dot' + (i === idx ? ' active' : cards[i].mastered ? ' seen' : '');
+    });
+}
+
+function buildDots() {
+    const p = document.getElementById('progress');
+    cards.forEach((_, i) => {
+        const d = document.createElement('div');
+        d.className = 'dot' + (i === 0 ? ' active' : '');
+        d.onclick = () => { idx = i; flipped = false; document.getElementById('card').classList.remove('flipped'); render(); };
+        p.appendChild(d);
+    });
+}
+
+function flip() {
+    flipped = !flipped;
+    document.getElementById('card').classList.toggle('flipped', flipped);
+    render();
+}
+
+function next() {
+    if (idx < cards.length - 1) {
+        idx++; flipped = false;
+        document.getElementById('card').classList.remove('flipped');
+        render();
+    } else {
+        document.getElementById('card').classList.add('shake');
+        setTimeout(() => document.getElementById('card').classList.remove('shake'), 400);
+    }
+}
+
+function prev() {
+    if (idx > 0) {
+        idx--; flipped = false;
+        document.getElementById('card').classList.remove('flipped');
+        render();
+    } else {
+        document.getElementById('card').classList.add('shake');
+        setTimeout(() => document.getElementById('card').classList.remove('shake'), 400);
+    }
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); }
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft') prev();
+});
+
+buildDots();
+render();
+</script>
+</body>
+</html>

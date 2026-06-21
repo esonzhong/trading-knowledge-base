@@ -167,15 +167,28 @@ li { margin: 5px 0; }
 .actions { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
 .empty { padding: 40px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); }
 .mobile-nav { display: none; }
+.mobile-tools-toggle { display: none; }
 body.mobile-forced .layout { grid-template-columns: 1fr; max-width: 720px; }
 body.mobile-forced .side { display: none; }
 body.mobile-forced .grid { grid-template-columns: 1fr; }
+body.mobile-forced .top-inner { padding-right: 92px; }
 body.mobile-forced .controls { grid-template-columns: 1fr 1fr; }
 body.mobile-forced .controls input,
 body.mobile-forced .controls #deckSelect { grid-column: 1 / -1; }
 body.mobile-forced .mobile-nav { display: grid; }
+body.mobile-forced .mobile-tools-toggle { display: inline-flex; }
+body.mobile-forced.mobile-tools-collapsed .topbar {
+  height: 0;
+  min-height: 0;
+  overflow: visible;
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+body.mobile-forced.mobile-tools-collapsed .top-inner { display: none; }
+body.mobile-forced.mobile-tools-collapsed .layout { padding-top: 12px; }
 @media (max-width: 760px) {
-  .top-inner { padding: 12px; }
+  .top-inner { padding: 12px 92px 12px 12px; }
   .title-row { align-items: flex-start; }
   h1 { font-size: 18px; }
   .controls { grid-template-columns: 1fr 1fr; }
@@ -202,4 +215,30 @@ body.mobile-forced .mobile-nav { display: grid; }
   }
   .desktop-only { display: none; }
   .mobile-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mobile-tools-toggle { display: inline-flex; }
+  body.mobile-tools-collapsed .topbar {
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  body.mobile-tools-collapsed .top-inner { display: none; }
+  body.mobile-tools-collapsed .layout { padding-top: 12px; }
+}
+.mobile-tools-toggle {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  z-index: 40;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--text);
+  box-shadow: 0 10px 26px rgba(0,0,0,.22);
+  backdrop-filter: blur(12px);
+  font-weight: 800;
 }

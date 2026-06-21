@@ -18,6 +18,7 @@ async function init() {
   bindEvents();
   setTheme(localStorage.getItem("fc_theme") || "dark");
   setView(localStorage.getItem("fc_view") || "auto");
+  setMobileTools(localStorage.getItem("fc_mobile_tools") || "expanded");
   const requestedDeck = new URLSearchParams(location.search).get("deck");
   const savedDeck = localStorage.getItem("fc_deck");
   await loadDeck(requestedDeck || savedDeck || state.manifest.decks[0].id);
@@ -192,6 +193,10 @@ function bindEvents() {
   $("autoView").onclick = () => setView("auto");
   $("desktopView").onclick = () => setView("desktop");
   $("mobileView").onclick = () => setView("mobile");
+  $("mobileToolsToggle").onclick = () => {
+    const next = document.body.classList.contains("mobile-tools-collapsed") ? "expanded" : "collapsed";
+    setMobileTools(next);
+  };
   document.addEventListener("keydown", event => {
     if (["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
     if (event.key === " ") {
@@ -204,6 +209,14 @@ function bindEvents() {
     if (event.key.toLowerCase() === "j") mark("good");
     if (event.key.toLowerCase() === "k") mark("bad");
   });
+}
+
+function setMobileTools(mode) {
+  const collapsed = mode === "collapsed";
+  document.body.classList.toggle("mobile-tools-collapsed", collapsed);
+  $("mobileToolsToggle").textContent = collapsed ? "设置" : "专注";
+  $("mobileToolsToggle").setAttribute("aria-expanded", String(!collapsed));
+  localStorage.setItem("fc_mobile_tools", mode);
 }
 
 function setTheme(mode) {

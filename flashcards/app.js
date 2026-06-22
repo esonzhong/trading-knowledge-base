@@ -6,7 +6,9 @@ const state = {
   marks: {},
   answerOpen: false,
   filtered: [],
-  speaking: false
+  speaking: false,
+  aiSpeaking: false,
+  aiAudio: null
 };
 
 const $ = id => document.getElementById(id);
@@ -32,7 +34,7 @@ async function loadJson(url) {
 }
 
 async function loadDeck(deckId) {
-  stopSpeech();
+  stopAllSpeech();
   const meta = state.manifest.decks.find(deck => deck.id === deckId) || state.manifest.decks[0];
   state.deck = getEmbeddedDeck(meta.id) || await loadJson(meta.file);
   state.deckId = meta.id;
@@ -68,7 +70,7 @@ function initSections() {
 }
 
 function applyFilters() {
-  stopSpeech();
+  stopAllSpeech();
   const query = $("search").value.trim().toLowerCase();
   const section = $("section").value;
   const status = $("status").value;
@@ -104,6 +106,7 @@ function render() {
   renderList();
   renderStage();
   updateSpeakButton();
+  updateAiSpeakButton();
 }
 
 function renderList() {
@@ -156,7 +159,7 @@ function renderAnswer(card) {
 
 function move(delta) {
   if (!state.filtered.length) return;
-  stopSpeech();
+  stopAllSpeech();
   const pos = state.filtered.indexOf(state.idx);
   state.idx = state.filtered[(pos + delta + state.filtered.length) % state.filtered.length];
   state.answerOpen = false;
@@ -176,10 +179,11 @@ function bindEvents() {
   $("status").onchange = applyFilters;
   $("show").onclick = () => {
     state.answerOpen = !state.answerOpen;
-    stopSpeech();
+    stopAllSpeech();
     render();
   };
   $("speak").onclick = toggleSpeech;
+  $("aiSpeak").onclick = toggleAiSpeech;
   $("prev").onclick = () => move(-1);
   $("nextMobile").onclick = () => move(1);
   $("markGood").onclick = () => mark("good");
@@ -229,6 +233,7 @@ function toggleSpeech() {
   }
   const card = state.deck && state.deck.cards[state.idx];
   if (!card) return;
+  stopAiSpeech();
   const segments = buildSpeechSegments(card);
   const voice = chooseChineseVoice();
   window.speechSynthesis.cancel();
@@ -237,10 +242,75 @@ function toggleSpeech() {
   speakSegments(segments, voice, 0);
 }
 
+async function toggleAiSpeech() {
+  if (state.aiSpeaking) {
+    stopAiSpeech();
+    return;
+  }
+  const card = state.deck && state.deck.cards[state.idx];
+  if (!card) return;
+  const endpoint = getAiTtsEndpoint();
+  if (!endpoint) return;
+  stopSpeech();
+  state.aiSpeaking = true;
+  updateAiSpeakButton("生成中");
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        deckId: state.deckId,
+        cardId: card.id,
+        answerOpen: state.answerOpen,
+        text: buildAiSpeechText(card)
+      })
+    });
+    if (!response.ok) throw new Error(`AI朗读服务返回 ${response.status}`);
+    const data = await response.json();
+    if (!data.audioUrl) throw new Error("AI朗读服务没有返回音频地址");
+    const audio = new Audio(data.audioUrl);
+    state.aiAudio = audio;
+    updateAiSpeakButton();
+    audio.onended = () => stopAiSpeech();
+    audio.onerror = () => {
+      stopAiSpeech();
+      alert("AI音频播放失败，请检查服务地址或音频链接。");
+    };
+    await audio.play();
+  } catch (error) {
+    stopAiSpeech();
+    alert(error.message);
+  }
+}
+
+function getAiTtsEndpoint() {
+  const configured = window.FLASHCARD_AI_TTS_ENDPOINT || localStorage.getItem("fc_ai_tts_endpoint");
+  if (configured) return configured;
+  const endpoint = prompt("请输入AI朗读服务地址，例如：https://你的域名/tts");
+  if (!endpoint) return "";
+  localStorage.setItem("fc_ai_tts_endpoint", endpoint.trim());
+  return endpoint.trim();
+}
+
+function stopAllSpeech() {
+  stopSpeech();
+  stopAiSpeech();
+}
+
 function stopSpeech() {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   state.speaking = false;
   updateSpeakButton();
+}
+
+function stopAiSpeech() {
+  if (state.aiAudio) {
+    state.aiAudio.pause();
+    state.aiAudio.currentTime = 0;
+    state.aiAudio = null;
+  }
+  state.aiSpeaking = false;
+  updateAiSpeakButton();
 }
 
 function updateSpeakButton() {
@@ -248,6 +318,13 @@ function updateSpeakButton() {
   if (!button) return;
   button.textContent = state.speaking ? "停止" : "朗读";
   button.classList.toggle("speaking", state.speaking);
+}
+
+function updateAiSpeakButton(label) {
+  const button = $("aiSpeak");
+  if (!button) return;
+  button.textContent = label || (state.aiSpeaking ? "停止AI" : "AI朗读");
+  button.classList.toggle("speaking", state.aiSpeaking);
 }
 
 function chooseChineseVoice() {
@@ -298,6 +375,21 @@ function buildSpeechSegments(card) {
     if (card.k) segments.push(speechSegment(`记忆钩子。${card.k}`, 0.86, 1.01));
   }
   return segments;
+}
+
+function buildAiSpeechText(card) {
+  const parts = [
+    `第 ${String(card.id).padStart(3, "0")} 张`,
+    `章节：${card.s}`,
+    `问题：${card.q}`
+  ];
+  if (state.answerOpen) {
+    parts.push(`一句话结论：${card.t}`);
+    if (card.p && card.p.length) parts.push(`必须记住：${card.p.join("。")}`);
+    if (card.m && card.m.length) parts.push(`容易误用：${card.m.join("。")}`);
+    if (card.k) parts.push(`记忆钩子：${card.k}`);
+  }
+  return normalizeSpeechText(parts.join("。"));
 }
 
 function speechSegment(text, rate, pitch) {

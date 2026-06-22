@@ -229,26 +229,12 @@ function toggleSpeech() {
   }
   const card = state.deck && state.deck.cards[state.idx];
   if (!card) return;
-  const text = buildSpeechText(card);
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "zh-CN";
-  utterance.rate = 0.95;
-  utterance.pitch = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const chineseVoice = voices.find(voice => /zh|Chinese|Mandarin|普通话|中文/i.test(`${voice.lang} ${voice.name}`));
-  if (chineseVoice) utterance.voice = chineseVoice;
-  utterance.onend = () => {
-    state.speaking = false;
-    updateSpeakButton();
-  };
-  utterance.onerror = () => {
-    state.speaking = false;
-    updateSpeakButton();
-  };
+  const segments = buildSpeechSegments(card);
+  const voice = chooseChineseVoice();
   window.speechSynthesis.cancel();
   state.speaking = true;
   updateSpeakButton();
-  window.speechSynthesis.speak(utterance);
+  speakSegments(segments, voice, 0);
 }
 
 function stopSpeech() {
@@ -264,18 +250,70 @@ function updateSpeakButton() {
   button.classList.toggle("speaking", state.speaking);
 }
 
-function buildSpeechText(card) {
-  const parts = [
-    `章节：${card.s}`,
-    `问题：${card.q}`
+function chooseChineseVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  const preferred = [
+    /Xiaoxiao|Xiaoyi|Yunxi|Yunjian|Huihui|Kangkang|Yaoyao/i,
+    /Ting-Ting|Sin-ji|Meijia|Li-mu|Yu-shu/i,
+    /zh-CN|Mandarin|Chinese|普通话|中文/i
+  ];
+  for (const pattern of preferred) {
+    const voice = voices.find(item => pattern.test(`${item.lang} ${item.name}`));
+    if (voice) return voice;
+  }
+  return voices.find(item => /^zh/i.test(item.lang));
+}
+
+function speakSegments(segments, voice, index) {
+  if (!state.speaking) return;
+  if (index >= segments.length) {
+    state.speaking = false;
+    updateSpeakButton();
+    return;
+  }
+  const segment = segments[index];
+  const utterance = new SpeechSynthesisUtterance(segment.text);
+  utterance.lang = "zh-CN";
+  utterance.rate = segment.rate;
+  utterance.pitch = segment.pitch;
+  utterance.volume = 1;
+  if (voice) utterance.voice = voice;
+  utterance.onend = () => speakSegments(segments, voice, index + 1);
+  utterance.onerror = () => {
+    state.speaking = false;
+    updateSpeakButton();
+  };
+  window.speechSynthesis.speak(utterance);
+}
+
+function buildSpeechSegments(card) {
+  const segments = [
+    speechSegment(`第 ${String(card.id).padStart(3, "0")} 张。${card.s}。`, 0.9, 0.96),
+    speechSegment(`问题是：${card.q}`, 0.86, 1.02)
   ];
   if (state.answerOpen) {
-    parts.push(`一句话结论：${card.t}`);
-    if (card.p && card.p.length) parts.push(`必须记住：${card.p.join("。")}`);
-    if (card.m && card.m.length) parts.push(`容易误用：${card.m.join("。")}`);
-    if (card.k) parts.push(`记忆钩子：${card.k}`);
+    segments.push(speechSegment(`一句话结论。${card.t}`, 0.84, 0.98));
+    if (card.p && card.p.length) segments.push(speechSegment(`必须记住。${card.p.join("。")}`, 0.88, 1));
+    if (card.m && card.m.length) segments.push(speechSegment(`容易误用。${card.m.join("。")}`, 0.9, 0.96));
+    if (card.k) segments.push(speechSegment(`记忆钩子。${card.k}`, 0.86, 1.01));
   }
-  return parts.join("。");
+  return segments;
+}
+
+function speechSegment(text, rate, pitch) {
+  return {
+    text: normalizeSpeechText(text),
+    rate,
+    pitch
+  };
+}
+
+function normalizeSpeechText(text) {
+  return String(text)
+    .replace(/\s+/g, " ")
+    .replace(/([。！？；])\s*/g, "$1 ")
+    .replace(/：/g, "，")
+    .trim();
 }
 
 function setMobileTools(mode) {

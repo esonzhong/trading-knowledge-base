@@ -8,7 +8,8 @@ const state = {
   filtered: [],
   speaking: false,
   aiSpeaking: false,
-  aiAudio: null
+  aiAudio: null,
+  wakeLock: null
 };
 
 const $ = id => document.getElementById(id);
@@ -244,7 +245,7 @@ function toggleSpeech() {
 
 async function toggleAiSpeech() {
   if (state.aiSpeaking) {
-    stopAiSpeech();
+    await stopAiSpeech();
     return;
   }
   const card = state.deck && state.deck.cards[state.idx];
@@ -252,28 +253,39 @@ async function toggleAiSpeech() {
   const endpoint = getAiTtsEndpoint();
   if (!endpoint) return;
   stopSpeech();
+  await requestWakeLock();
   state.aiSpeaking = true;
   updateAiSpeakButton("生成中");
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        deckId: state.deckId,
-        cardId: card.id,
-        answerOpen: state.answerOpen,
-        text: buildAiSpeechText(card)
-      })
-    });
-    if (!response.ok) throw new Error(`AI朗读服务返回 ${response.status}`);
-    const data = await response.json();
-    if (!data.audioUrl) throw new Error("AI朗读服务没有返回音频地址");
-    const audio = new Audio(data.audioUrl);
+    const payload = {
+      deckId: state.deckId,
+      cardId: card.id,
+      answerOpen: state.answerOpen,
+      text: buildAiSpeechText(card)
+    };
+    const cacheKey = aiAudioCacheKey(payload);
+    let audioUrl = localStorage.getItem(cacheKey);
+    if (!audioUrl) {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`AI朗读服务返回 ${response.status}`);
+      const data = await response.json();
+      if (!data.audioUrl) throw new Error("AI朗读服务没有返回音频地址");
+      audioUrl = normalizeAudioUrl(data.audioUrl);
+      localStorage.setItem(cacheKey, audioUrl);
+    }
+    const audio = new Audio(audioUrl);
+    audio.preload = "auto";
+    audio.playsInline = true;
     state.aiAudio = audio;
     updateAiSpeakButton();
     audio.onended = () => stopAiSpeech();
     audio.onerror = () => {
       stopAiSpeech();
+      localStorage.removeItem(cacheKey);
       alert("AI音频播放失败，请检查服务地址或音频链接。");
     };
     await audio.play();
@@ -311,6 +323,7 @@ function stopAiSpeech() {
   }
   state.aiSpeaking = false;
   updateAiSpeakButton();
+  releaseWakeLock();
 }
 
 function updateSpeakButton() {
@@ -325,6 +338,25 @@ function updateAiSpeakButton(label) {
   if (!button) return;
   button.textContent = label || (state.aiSpeaking ? "停止AI" : "AI朗读");
   button.classList.toggle("speaking", state.aiSpeaking);
+}
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator) || state.wakeLock) return;
+  try {
+    state.wakeLock = await navigator.wakeLock.request("screen");
+    state.wakeLock.addEventListener("release", () => {
+      state.wakeLock = null;
+    });
+  } catch (error) {
+    state.wakeLock = null;
+  }
+}
+
+function releaseWakeLock() {
+  if (!state.wakeLock) return;
+  const lock = state.wakeLock;
+  state.wakeLock = null;
+  lock.release().catch(() => {});
 }
 
 function chooseChineseVoice() {
@@ -390,6 +422,14 @@ function buildAiSpeechText(card) {
     if (card.k) parts.push(`记忆钩子：${card.k}`);
   }
   return normalizeSpeechText(parts.join("。"));
+}
+
+function aiAudioCacheKey(payload) {
+  return `fc_ai_audio_${state.deckId}_${payload.cardId}_${payload.answerOpen ? "answer" : "question"}`;
+}
+
+function normalizeAudioUrl(url) {
+  return String(url).replace(/^http:\/\//, "https://");
 }
 
 function speechSegment(text, rate, pitch) {

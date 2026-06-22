@@ -1,62 +1,30 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import hashlib
+import json
 import os
-from typing import Any, Optional, Union
-
-import dashscope
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-
-
-class TtsRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=3000)
-    deckId: Optional[str] = None
-    cardId: Optional[Union[int, str]] = None
-    answerOpen: bool = False
+import ssl
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from socketserver import ThreadingMixIn
 
 
-def env_list(name: str, default: str) -> list[str]:
-    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+ENDPOINT = os.getenv("QWEN_TTS_ENDPOINT", "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation")
+API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+MODEL = os.getenv("QWEN_TTS_MODEL", "qwen3-tts-flash")
+VOICE = os.getenv("QWEN_TTS_VOICE", "Cherry")
+ALLOWED_ORIGIN = os.getenv("TTS_ALLOWED_ORIGIN", "https://esonzhong.github.io")
+MAX_TEXT_LEN = int(os.getenv("QWEN_TTS_MAX_TEXT_LEN", "580"))
+CACHE_DIR = Path(os.getenv("QWEN_TTS_CACHE_DIR", "/opt/qwen-tts/cache"))
 
 
-app = FastAPI(title="Trading Flashcards Qwen TTS")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=env_list(
-        "TTS_ALLOWED_ORIGINS",
-        "https://esonzhong.github.io,http://127.0.0.1:8084,http://localhost:8084",
-    ),
-    allow_credentials=False,
-    allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["*"],
-)
-
-
-def configure_dashscope() -> str:
-    api_key = os.getenv("DASHSCOPE_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="服务器未配置 DASHSCOPE_API_KEY")
-    workspace_id = os.getenv("DASHSCOPE_WORKSPACE_ID")
-    if workspace_id:
-        dashscope.base_http_api_url = f"https://{workspace_id}.cn-beijing.maas.aliyuncs.com/api/v1"
-    return api_key
-
-
-def to_plain(value: Any) -> Any:
-    if hasattr(value, "to_dict"):
-        return value.to_dict()
+def find_audio_url(value):
     if isinstance(value, dict):
-        return {key: to_plain(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [to_plain(item) for item in value]
-    if hasattr(value, "__dict__"):
-        return {key: to_plain(item) for key, item in vars(value).items() if not key.startswith("_")}
-    return value
-
-
-def find_audio_url(value: Any) -> Optional[str]:
-    value = to_plain(value)
-    if isinstance(value, dict):
-        for key in ("audio_url", "audioUrl", "url"):
+        for key in ("url", "audio_url", "audioUrl"):
             item = value.get(key)
             if isinstance(item, str) and item.startswith(("http://", "https://")):
                 return item
@@ -64,7 +32,7 @@ def find_audio_url(value: Any) -> Optional[str]:
             found = find_audio_url(item)
             if found:
                 return found
-    if isinstance(value, list):
+    elif isinstance(value, list):
         for item in value:
             found = find_audio_url(item)
             if found:
@@ -72,32 +40,139 @@ def find_audio_url(value: Any) -> Optional[str]:
     return None
 
 
-@app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def cache_key(text):
+    raw = "|".join([ENDPOINT, MODEL, VOICE, text])
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-@app.post("/tts")
-def tts(payload: TtsRequest) -> dict[str, Any]:
-    api_key = configure_dashscope()
+def is_audio_url_valid(url):
     try:
-        response = dashscope.MultiModalConversation.call(
-            model=os.getenv("QWEN_TTS_MODEL", "qwen3-tts-flash"),
-            api_key=api_key,
-            text=payload.text,
-            voice=os.getenv("QWEN_TTS_VOICE", "Cherry"),
-            language_type="Chinese",
-            stream=False,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Qwen-TTS 调用失败：{exc}") from exc
+        expires = urllib.parse.parse_qs(urllib.parse.urlparse(url).query).get("Expires", ["0"])[0]
+        return int(expires) > int(time.time()) + 600
+    except Exception:
+        return False
 
-    audio_url = find_audio_url(response)
-    if not audio_url:
-        raise HTTPException(status_code=502, detail="Qwen-TTS 未返回可播放音频地址")
-    return {
-        "audioUrl": audio_url,
-        "deckId": payload.deckId,
-        "cardId": payload.cardId,
-        "answerOpen": payload.answerOpen,
-    }
+
+def read_cache(key):
+    path = CACHE_DIR / (key + ".json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        audio_url = data.get("audioUrl")
+        if audio_url and is_audio_url_valid(audio_url):
+            return data
+    except Exception:
+        return None
+    return None
+
+
+def write_cache(key, data):
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path = CACHE_DIR / (key + ".json")
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "QwenTTS/1.1"
+
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+        self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        super().end_headers()
+
+    def send_json(self, status, payload):
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.end_headers()
+
+    def do_GET(self):
+        if self.path.startswith("/health"):
+            self.send_json(200, {"status": "ok"})
+        else:
+            self.send_json(404, {"error": "not_found"})
+
+    def do_POST(self):
+        if not self.path.startswith("/tts"):
+            self.send_json(404, {"error": "not_found"})
+            return
+        if not API_KEY:
+            self.send_json(500, {"error": "server_missing_api_key"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length).decode("utf-8-sig"))
+            text = str(payload.get("text", "")).strip()
+            if not text:
+                self.send_json(400, {"error": "empty_text"})
+                return
+            if len(text) > MAX_TEXT_LEN:
+                text = text[:MAX_TEXT_LEN] + "。"
+
+            key = cache_key(text)
+            cached = read_cache(key)
+            if cached:
+                cached["cached"] = True
+                self.send_json(200, cached)
+                return
+
+            req_body = json.dumps({
+                "model": MODEL,
+                "input": {
+                    "text": text,
+                    "voice": VOICE,
+                    "language_type": "Chinese"
+                }
+            }, ensure_ascii=False).encode("utf-8")
+            request = urllib.request.Request(
+                ENDPOINT,
+                data=req_body,
+                method="POST",
+                headers={
+                    "Authorization": "Bearer " + API_KEY,
+                    "Content-Type": "application/json"
+                },
+            )
+            with urllib.request.urlopen(request, timeout=90, context=ssl.create_default_context()) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+            audio_url = find_audio_url(result)
+            status_code = int(result.get("status_code", 200)) if isinstance(result, dict) else 200
+            if not audio_url or status_code >= 400:
+                self.send_json(502, {"error": "qwen_tts_failed", "detail": result})
+                return
+            response = {
+                "audioUrl": audio_url,
+                "deckId": payload.get("deckId"),
+                "cardId": payload.get("cardId"),
+                "answerOpen": payload.get("answerOpen", False),
+                "cached": False
+            }
+            write_cache(key, response)
+            self.send_json(200, response)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")
+            self.send_json(502, {"error": "qwen_http_error", "status": exc.code, "detail": detail})
+        except Exception as exc:
+            self.send_json(500, {"error": "server_error", "detail": str(exc)})
+
+    def log_message(self, fmt, *args):
+        print("%s - %s" % (self.address_string(), fmt % args), flush=True)
+
+
+if __name__ == "__main__":
+    host = os.getenv("TTS_HOST", "127.0.0.1")
+    port = int(os.getenv("TTS_PORT", "8787"))
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

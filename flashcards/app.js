@@ -5,7 +5,8 @@ const state = {
   idx: 0,
   marks: {},
   answerOpen: false,
-  filtered: []
+  filtered: [],
+  speaking: false
 };
 
 const $ = id => document.getElementById(id);
@@ -31,6 +32,7 @@ async function loadJson(url) {
 }
 
 async function loadDeck(deckId) {
+  stopSpeech();
   const meta = state.manifest.decks.find(deck => deck.id === deckId) || state.manifest.decks[0];
   state.deck = getEmbeddedDeck(meta.id) || await loadJson(meta.file);
   state.deckId = meta.id;
@@ -66,6 +68,7 @@ function initSections() {
 }
 
 function applyFilters() {
+  stopSpeech();
   const query = $("search").value.trim().toLowerCase();
   const section = $("section").value;
   const status = $("status").value;
@@ -100,6 +103,7 @@ function render() {
   $("meter").style.width = `${Math.round(good / cards.length * 100)}%`;
   renderList();
   renderStage();
+  updateSpeakButton();
 }
 
 function renderList() {
@@ -152,6 +156,7 @@ function renderAnswer(card) {
 
 function move(delta) {
   if (!state.filtered.length) return;
+  stopSpeech();
   const pos = state.filtered.indexOf(state.idx);
   state.idx = state.filtered[(pos + delta + state.filtered.length) % state.filtered.length];
   state.answerOpen = false;
@@ -171,8 +176,10 @@ function bindEvents() {
   $("status").onchange = applyFilters;
   $("show").onclick = () => {
     state.answerOpen = !state.answerOpen;
+    stopSpeech();
     render();
   };
+  $("speak").onclick = toggleSpeech;
   $("prev").onclick = () => move(-1);
   $("nextMobile").onclick = () => move(1);
   $("markGood").onclick = () => mark("good");
@@ -209,6 +216,66 @@ function bindEvents() {
     if (event.key.toLowerCase() === "j") mark("good");
     if (event.key.toLowerCase() === "k") mark("bad");
   });
+}
+
+function toggleSpeech() {
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+    alert("当前浏览器不支持语音朗读。");
+    return;
+  }
+  if (state.speaking) {
+    stopSpeech();
+    return;
+  }
+  const card = state.deck && state.deck.cards[state.idx];
+  if (!card) return;
+  const text = buildSpeechText(card);
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "zh-CN";
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const chineseVoice = voices.find(voice => /zh|Chinese|Mandarin|普通话|中文/i.test(`${voice.lang} ${voice.name}`));
+  if (chineseVoice) utterance.voice = chineseVoice;
+  utterance.onend = () => {
+    state.speaking = false;
+    updateSpeakButton();
+  };
+  utterance.onerror = () => {
+    state.speaking = false;
+    updateSpeakButton();
+  };
+  window.speechSynthesis.cancel();
+  state.speaking = true;
+  updateSpeakButton();
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopSpeech() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  state.speaking = false;
+  updateSpeakButton();
+}
+
+function updateSpeakButton() {
+  const button = $("speak");
+  if (!button) return;
+  button.textContent = state.speaking ? "停止" : "朗读";
+  button.classList.toggle("speaking", state.speaking);
+}
+
+function buildSpeechText(card) {
+  const parts = [
+    `章节：${card.s}`,
+    `问题：${card.q}`
+  ];
+  if (state.answerOpen) {
+    parts.push(`一句话结论：${card.t}`);
+    if (card.p && card.p.length) parts.push(`必须记住：${card.p.join("。")}`);
+    if (card.m && card.m.length) parts.push(`容易误用：${card.m.join("。")}`);
+    if (card.k) parts.push(`记忆钩子：${card.k}`);
+  }
+  return parts.join("。");
 }
 
 function setMobileTools(mode) {

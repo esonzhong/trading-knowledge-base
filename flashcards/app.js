@@ -259,7 +259,7 @@ async function toggleAiSpeech() {
   try {
     const payload = {
       deckId: state.deckId,
-      cardId: card.id,
+      cardId: currentCardNumber(),
       answerOpen: state.answerOpen,
       text: buildAiSpeechText(card)
     };
@@ -397,7 +397,7 @@ function speakSegments(segments, voice, index) {
 
 function buildSpeechSegments(card) {
   const segments = [
-    speechSegment(`第 ${String(card.id).padStart(3, "0")} 张。${card.s}。`, 0.9, 0.96),
+    speechSegment(`第 ${String(currentCardNumber()).padStart(3, "0")} 张。${card.s}。`, 0.9, 0.96),
     speechSegment(`问题是：${card.q}`, 0.86, 1.02)
   ];
   if (state.answerOpen) {
@@ -411,7 +411,7 @@ function buildSpeechSegments(card) {
 
 function buildAiSpeechText(card) {
   const parts = [
-    `第 ${String(card.id).padStart(3, "0")} 张`,
+    `第 ${String(currentCardNumber()).padStart(3, "0")} 张`,
     `章节：${card.s}`,
     `问题：${card.q}`
   ];
@@ -425,11 +425,24 @@ function buildAiSpeechText(card) {
 }
 
 function aiAudioCacheKey(payload) {
-  return `fc_ai_audio_${state.deckId}_${payload.cardId}_${payload.answerOpen ? "answer" : "question"}`;
+  return `fc_ai_audio_v2_${state.deckId}_${payload.cardId}_${payload.answerOpen ? "answer" : "question"}_${simpleHash(payload.text)}`;
 }
 
 function normalizeAudioUrl(url) {
   return String(url).replace(/^http:\/\//, "https://");
+}
+
+function currentCardNumber() {
+  return state.idx + 1;
+}
+
+function simpleHash(value) {
+  let hash = 0;
+  const text = String(value);
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash).toString(36);
 }
 
 function speechSegment(text, rate, pitch) {
